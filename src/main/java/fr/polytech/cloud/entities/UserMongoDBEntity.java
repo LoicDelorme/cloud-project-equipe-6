@@ -3,9 +3,7 @@ package fr.polytech.cloud.entities;
 import org.jongo.marshall.jackson.oid.MongoId;
 import org.jongo.marshall.jackson.oid.MongoObjectId;
 
-import java.util.Date;
-
-public class User extends AbstractMongoDBEntity {
+public class UserMongoDBEntity extends AbstractMongoDBEntity {
 
     @MongoId
     @MongoObjectId
@@ -15,9 +13,9 @@ public class User extends AbstractMongoDBEntity {
 
     private String firstName;
 
-    private Date birthDay;
+    private String birthDay;
 
-    private Position position;
+    private PositionMongoDBEntity position;
 
     @Override
     public String getId() {
@@ -44,19 +42,19 @@ public class User extends AbstractMongoDBEntity {
         this.firstName = firstName;
     }
 
-    public Date getBirthDay() {
+    public String getBirthDay() {
         return birthDay;
     }
 
-    public void setBirthDay(final Date birthDay) {
+    public void setBirthDay(final String birthDay) {
         this.birthDay = birthDay;
     }
 
-    public Position getPosition() {
+    public PositionMongoDBEntity getPosition() {
         return position;
     }
 
-    public void setPosition(final Position position) {
+    public void setPosition(final PositionMongoDBEntity position) {
         this.position = position;
     }
 }

@@ -17,17 +17,17 @@ public class MongoCollectionManager {
     private MongoCollectionManager() {
     }
 
-    public static MongoCollection getMongoCollection(String databaseName, String collectionName) {
+    public static MongoCollection getMongoCollection(String hostname, int port, String databaseName, String collectionName) {
         synchronized (lock) {
-            final String formattedKey = databaseName + "-" + collectionName;
-            if (!mongoCollections.containsKey(formattedKey)) {
-                final DB database = new MongoClient().getDB(databaseName);
+            final String key = databaseName + "-" + collectionName;
+            if (!mongoCollections.containsKey(key)) {
+                final DB database = new MongoClient(hostname, port).getDB(databaseName);
                 final Jongo jongo = new Jongo(database);
 
-                mongoCollections.put(formattedKey, jongo.getCollection(collectionName));
+                mongoCollections.put(key, jongo.getCollection(collectionName));
             }
 
-            return mongoCollections.get(formattedKey);
+            return mongoCollections.get(key);
         }
     }
 }

@@ -16,8 +16,6 @@ public interface DaoServices<T, I> {
 
     public int count() throws Exception;
 
-    public int countWhere(I parameters) throws Exception;
-
     public void insert(T object) throws Exception;
 
     public void update(I id, T object) throws Exception;
@@ -25,6 +23,4 @@ public interface DaoServices<T, I> {
     public void delete(I id) throws Exception;
 
     public void deleteAll() throws Exception;
-
-    public void deleteAllWhere(I parameters) throws Exception;
 }

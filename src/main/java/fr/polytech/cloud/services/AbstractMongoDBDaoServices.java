@@ -1,6 +1,6 @@
 package fr.polytech.cloud.services;
 
-import fr.polytech.cloud.entities.Entity;
+import fr.polytech.cloud.entities.AbstractMongoDBEntity;
 import org.bson.types.ObjectId;
 import org.jongo.MongoCollection;
 import org.jongo.MongoCursor;
@@ -8,7 +8,7 @@ import org.jongo.MongoCursor;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AbstractMongoDBDaoServices<T extends Entity<String>> implements DaoServices<T, String> {
+public class AbstractMongoDBDaoServices<T extends AbstractMongoDBEntity> implements DaoServices<T, String> {
 
     private final Class<T> entityClass;
 
@@ -78,15 +78,6 @@ public class AbstractMongoDBDaoServices<T extends Entity<String>> implements Dao
     }
 
     @Override
-    public int countWhere(final String parameters) throws Exception {
-        final MongoCursor<T> mongoCursor = this.mongoCollection.find(parameters).as(this.entityClass);
-        final int nbEntities = mongoCursor.count();
-        mongoCursor.close();
-
-        return nbEntities;
-    }
-
-    @Override
     public void insert(final T object) throws Exception {
         this.mongoCollection.insert(object);
     }
@@ -104,10 +95,5 @@ public class AbstractMongoDBDaoServices<T extends Entity<String>> implements Dao
     @Override
     public void deleteAll() throws Exception {
         this.mongoCollection.remove();
-    }
-
-    @Override
-    public void deleteAllWhere(final String parameters) throws Exception {
-        this.mongoCollection.remove(parameters);
     }
 }

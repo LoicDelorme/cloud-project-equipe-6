@@ -1,6 +1,6 @@
 package fr.polytech.cloud.entities;
 
-public class Position {
+public class PositionMongoDBEntity {
 
     private double lat;
 
