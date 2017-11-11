@@ -18,6 +18,8 @@ public interface DaoServices<T, I> {
 
     public void insert(T object) throws Exception;
 
+    public void insertAll(T... objects) throws Exception;
+
     public void update(I id, T object) throws Exception;
 
     public void delete(I id) throws Exception;

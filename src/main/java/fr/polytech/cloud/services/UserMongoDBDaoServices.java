@@ -1,17 +1,20 @@
 package fr.polytech.cloud.services;
 
 import fr.polytech.cloud.collections.MongoCollectionManager;
-import fr.polytech.cloud.configurations.DynamicConfiguration;
+import fr.polytech.cloud.configurations.MongoDBConfiguration;
 import fr.polytech.cloud.entities.UserMongoDBEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
+@Service
 public class UserMongoDBDaoServices extends AbstractMongoDBDaoServices<UserMongoDBEntity> {
 
-    public UserMongoDBDaoServices(DynamicConfiguration configuration) {
-        super(UserMongoDBEntity.class,MongoCollectionManager.getMongoCollection(
-                configuration.getProperty("spring.data.mongodb.host"),
-                Integer.parseInt(configuration.getProperty("spring.data.mongodb.port")),
-                configuration.getProperty("spring.data.mongodb.database"),
-                configuration.getProperty("spring.data.mongodb.collection")
-        ));
+    @Autowired
+    public UserMongoDBDaoServices(final MongoDBConfiguration mongoDBConfiguration) {
+        super(UserMongoDBEntity.class, MongoCollectionManager.getMongoCollection(
+                mongoDBConfiguration.getDatabaseHost(),
+                mongoDBConfiguration.getDatabasePort(),
+                mongoDBConfiguration.getDatabaseName(),
+                mongoDBConfiguration.getDatabaseCollection()));
     }
 }

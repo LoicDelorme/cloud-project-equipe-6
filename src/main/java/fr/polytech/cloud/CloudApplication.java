@@ -1,7 +1,7 @@
 package fr.polytech.cloud;
 
-import fr.polytech.cloud.configurations.DynamicConfiguration;
-import fr.polytech.cloud.services.UserMongoDBDaoServices;
+import fr.polytech.cloud.configurations.DynamicMongoDBConfiguration;
+import fr.polytech.cloud.configurations.MongoDBConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -14,12 +14,7 @@ public class CloudApplication {
     }
 
     @Bean
-    public DynamicConfiguration dynamicConfiguration() {
-        return new DynamicConfiguration();
-    }
-
-    @Bean
-    public UserMongoDBDaoServices userMongoDBDaoServices() {
-        return new UserMongoDBDaoServices(dynamicConfiguration());
+    public MongoDBConfiguration mongoDBConfiguration() {
+        return new DynamicMongoDBConfiguration();
     }
 }

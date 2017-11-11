@@ -83,6 +83,11 @@ public class AbstractMongoDBDaoServices<T extends AbstractMongoDBEntity> impleme
     }
 
     @Override
+    public void insertAll(final T... objects) throws Exception {
+        this.mongoCollection.insert(objects);
+    }
+
+    @Override
     public void update(final String id, final T object) throws Exception {
         this.mongoCollection.update(new ObjectId(id)).with(object);
     }
