@@ -1,21 +1,25 @@
 package fr.polytech.cloud.deserializers;
 
-import javax.json.bind.Jsonb;
-import javax.json.bind.JsonbBuilder;
-import javax.json.bind.JsonbConfig;
-import java.lang.reflect.Type;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import fr.polytech.cloud.entities.UserMongoDBEntity;
+import fr.polytech.cloud.forms.UserForm;
 
-public class JsonDeserializer implements Deserializer<String> {
+public class JsonDeserializer implements Deserializer {
 
-    private static final Jsonb jsonBuilder = JsonbBuilder.create(new JsonbConfig());
+    private final ObjectMapper mapper;
 
-    @Override
-    public <O> O from(String in, Class<O> clazz) {
-        return jsonBuilder.fromJson(in, clazz);
+    public JsonDeserializer() {
+        final SimpleModule simpleModule = new SimpleModule();
+        simpleModule.addDeserializer(UserMongoDBEntity.class, new UserMongoDBEntityDeserializer());
+        simpleModule.addDeserializer(UserForm.class, new UserFormDeserializer());
+
+        this.mapper = new ObjectMapper();
+        this.mapper.registerModule(simpleModule);
     }
 
     @Override
-    public <O> O from(final String in, final Type type) {
-        return jsonBuilder.fromJson(in, type);
+    public <O> O from(String in, Class<O> clazz) throws Exception {
+        return this.mapper.readValue(in, clazz);
     }
 }

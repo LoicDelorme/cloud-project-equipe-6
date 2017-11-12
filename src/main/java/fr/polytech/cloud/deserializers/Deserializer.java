@@ -1,10 +1,6 @@
 package fr.polytech.cloud.deserializers;
 
-import java.lang.reflect.Type;
+public interface Deserializer {
 
-public interface Deserializer<I> {
-
-    public <O> O from(I in, Class<O> clazz);
-
-    public <O> O from(I in, Type type);
+    public <O> O from(String in, Class<O> clazz) throws Exception;
 }
