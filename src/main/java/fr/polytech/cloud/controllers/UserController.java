@@ -36,6 +36,8 @@ public class UserController extends AbstractController {
 
     public static final String DEFAULT_AGE_SEARCH_PATTERN = "{birthDay : {$%s: #}}";
 
+    public static final String DEFAULT_LASTNAME_SEARCH_PATTERN = "{lastName : '%s'}";
+
     @Autowired
     private UserMongoDBDaoServices userMongoDBDaoServices;
 
@@ -159,6 +161,14 @@ public class UserController extends AbstractController {
         final Date date = new Date(computedDate.getYear(), computedDate.getMonthValue(), computedDate.getDayOfMonth());
 
         final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWhereWithLimit(query, computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, date);
+        return new ResponseEntity<String>(SERIALIZER.to(users), new HttpHeaders(), HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "/user/search", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+    public ResponseEntity<String> searchByLastname(@RequestParam(defaultValue = "" + DEFAULT_PAGE, value = "page") String page, @RequestParam(value = "term") String term) throws Exception {
+        final String query = String.format(DEFAULT_LASTNAME_SEARCH_PATTERN, term);
+
+        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWhereWithLimit(query, computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE);
         return new ResponseEntity<String>(SERIALIZER.to(users), new HttpHeaders(), HttpStatus.OK);
     }
 }
