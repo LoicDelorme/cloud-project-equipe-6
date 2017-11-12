@@ -1,24 +1,12 @@
 package fr.polytech.cloud.entities;
 
-public class PositionMongoDBEntity {
+import lombok.Data;
 
-    private double lat;
+import java.util.List;
 
-    private double lon;
+public @Data class PositionMongoDBEntity {
 
-    public double getLat() {
-        return lat;
-    }
+    private String type;
 
-    public void setLat(final double lat) {
-        this.lat = lat;
-    }
-
-    public double getLon() {
-        return lon;
-    }
-
-    public void setLon(final double lon) {
-        this.lon = lon;
-    }
+    private List<Double> coordinates;
 }
