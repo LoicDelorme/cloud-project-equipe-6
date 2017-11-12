@@ -6,22 +6,20 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-import javax.servlet.http.HttpServletRequest;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 
 @ControllerAdvice
-public class ExceptionHandlerController extends AbstractController {
+public class ExceptionsHandlerController extends AbstractController {
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<String> handleException(HttpServletRequest request, Exception exception) {
+    public ResponseEntity<String> handleException(Exception exception) {
         final Writer writer = new StringWriter();
         exception.printStackTrace(new PrintWriter(writer));
-
         final String error = writer.toString();
-        LOGGER.error(error);
 
+        LOGGER.error(error);
         return new ResponseEntity<String>(error, new HttpHeaders(), HttpStatus.NOT_FOUND);
     }
 }

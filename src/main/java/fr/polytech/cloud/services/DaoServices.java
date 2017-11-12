@@ -10,9 +10,9 @@ public interface DaoServices<T, I> {
 
     public List<T> getAllWithLimit(int initialOffset, int nbEntities) throws Exception;
 
-    public List<T> getAllWhere(I parameters) throws Exception;
+    public List<T> getAllWhere(String query, Object... parameters) throws Exception;
 
-    public List<T> getAllWhereWithLimit(I parameters, int initialOffset, int nbEntities) throws Exception;
+    public List<T> getAllWhereWithLimit(String query, int initialOffset, int nbEntities, Object... parameters) throws Exception;
 
     public int count() throws Exception;
 

@@ -10,29 +10,50 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 public class UserController extends AbstractController {
 
-    public static final int DEFAULT_PAGE = 1;
+    public static final int DEFAULT_PAGE = 0;
 
     public static final int DEFAULT_PAGE_SIZE = 100;
+
+    public static final int DEFAULT_COORDINATES_LAT_OFFSET = 0;
+
+    public static final int DEFAULT_COORDINATES_LON_OFFSET = 1;
+
+    public static final int DEFAULT_COORDINATES_SIZE = 2;
+
+    public static final List<String> DEFAULT_SUPPORTED_OPERATORS = Arrays.asList("eq", "gt", "gte", "lt", "lte", "ne");
+
+    public static final int DEFAULT_SUPPORTED_OPERATORS_NUMBER = 1;
+
+    public static final String DEFAULT_AGE_SEARCH_PATTERN = "{birthDay : {$%s: #}}";
 
     @Autowired
     private UserMongoDBDaoServices userMongoDBDaoServices;
 
     @RequestMapping(value = "/user", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    public ResponseEntity<String> getAllUsers(@RequestParam(required = true, defaultValue = "" + DEFAULT_PAGE, value = "page") String page) throws Exception {
-        int effectivePage;
+    public ResponseEntity<String> getAllUsers(@RequestParam(defaultValue = "" + DEFAULT_PAGE, value = "page") String page) throws Exception {
+        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWithLimit(computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE);
+        return new ResponseEntity<String>(SERIALIZER.to(users), new HttpHeaders(), HttpStatus.OK);
+    }
+
+    private int computePage(String requestedPage) {
+        int page;
         try {
-            effectivePage = Integer.parseInt(page);
+            page = Integer.parseInt(requestedPage);
         } catch (NumberFormatException ex) {
-            effectivePage = DEFAULT_PAGE;
+            page = DEFAULT_PAGE;
         }
 
-        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWithLimit((effectivePage - 1) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE);
-        return new ResponseEntity<String>(SERIALIZER.to(users), new HttpHeaders(), HttpStatus.OK);
+        return page;
     }
 
     @RequestMapping(value = "/user", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
@@ -76,11 +97,35 @@ public class UserController extends AbstractController {
             return new ResponseEntity<String>("Unknown user!", new HttpHeaders(), HttpStatus.NOT_FOUND);
         }
 
-        final UserMongoDBEntity updatedUser = DESERIALIZER.from(data, UserMongoDBEntity.class);
-        this.userMongoDBDaoServices.update(id, updatedUser);
+        mergeUserMongoDBEntityFromInto(DESERIALIZER.from(data, UserMongoDBEntity.class), user);
+        this.userMongoDBDaoServices.update(id, user);
 
-        final UserMongoDBEntity refreshedUser = this.userMongoDBDaoServices.getOne(id);
-        return new ResponseEntity<String>(SERIALIZER.to(refreshedUser), new HttpHeaders(), HttpStatus.OK);
+        return new ResponseEntity<String>(SERIALIZER.to(user), new HttpHeaders(), HttpStatus.OK);
+    }
+
+    private void mergeUserMongoDBEntityFromInto(UserMongoDBEntity from, UserMongoDBEntity into) {
+        final String id = from.getId() == null ? into.getId() : from.getId();
+        final String lastName = from.getLastName() == null ? into.getLastName() : from.getLastName();
+        final String firstName = from.getFirstName() == null ? into.getFirstName() : from.getFirstName();
+        final Date birthDay = from.getBirthDay() == null ? into.getBirthDay() : from.getBirthDay();
+
+        final List<Double> fromCoordinates = from.getPosition() == null ? null : from.getPosition().getCoordinates();
+        final List<Double> intoCoordinates = into.getPosition() == null ? null : into.getPosition().getCoordinates();
+        final Double fromLat = (fromCoordinates == null || fromCoordinates.isEmpty()) ? null : fromCoordinates.get(DEFAULT_COORDINATES_LAT_OFFSET);
+        final Double intoLat = (intoCoordinates == null || intoCoordinates.isEmpty()) ? null : intoCoordinates.get(DEFAULT_COORDINATES_LAT_OFFSET);
+        final Double fromLon = (fromCoordinates == null || fromCoordinates.size() != DEFAULT_COORDINATES_SIZE) ? null : fromCoordinates.get(DEFAULT_COORDINATES_LON_OFFSET);
+        final Double intoLon = (intoCoordinates == null || intoCoordinates.size() != DEFAULT_COORDINATES_SIZE) ? null : intoCoordinates.get(DEFAULT_COORDINATES_LON_OFFSET);
+        final Double lat = fromLat == null ? intoLat : fromLat;
+        final Double lon = fromLon == null ? intoLon : fromLon;
+
+        into.setId(id);
+        into.setLastName(lastName);
+        into.setFirstName(firstName);
+        into.setBirthDay(birthDay);
+
+        intoCoordinates.clear();
+        intoCoordinates.add(lat);
+        intoCoordinates.add(lon);
     }
 
     @RequestMapping(value = "/user/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
@@ -92,5 +137,28 @@ public class UserController extends AbstractController {
 
         this.userMongoDBDaoServices.delete(id);
         return new ResponseEntity<String>(new HttpHeaders(), HttpStatus.NO_CONTENT);
+    }
+
+    @RequestMapping(value = "/user/age", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+    public ResponseEntity<String> searchByAge(@RequestParam(defaultValue = "" + DEFAULT_PAGE, value = "page") String page, @RequestParam Map<String, String> parameters) throws Exception {
+        final List<String> requestedOperators = DEFAULT_SUPPORTED_OPERATORS.stream().filter(parameters.keySet()::contains).collect(Collectors.toList());
+        if (requestedOperators.size() != DEFAULT_SUPPORTED_OPERATORS_NUMBER) {
+            return new ResponseEntity<String>("Only one operator is supported at the same time!", new HttpHeaders(), HttpStatus.NOT_FOUND);
+        }
+
+        final String requestedOperator = requestedOperators.get(0);
+        int age;
+        try {
+            age = Integer.parseInt(parameters.get(requestedOperator));
+        } catch (NumberFormatException ex) {
+            return new ResponseEntity<String>("Invalid age number!", new HttpHeaders(), HttpStatus.NOT_FOUND);
+        }
+        final LocalDate computedDate = LocalDate.now().minusYears(age);
+
+        final String query = String.format(DEFAULT_AGE_SEARCH_PATTERN, requestedOperator);
+        final Date date = new Date(computedDate.getYear(), computedDate.getMonthValue(), computedDate.getDayOfMonth());
+
+        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWhereWithLimit(query, computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, date);
+        return new ResponseEntity<String>(SERIALIZER.to(users), new HttpHeaders(), HttpStatus.OK);
     }
 }

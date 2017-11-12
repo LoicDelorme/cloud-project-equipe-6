@@ -11,7 +11,7 @@ public abstract class AbstractController {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(AbstractController.class);
 
-    public static final Serializer<String> SERIALIZER = new JsonSerializer();
+    public static final Serializer SERIALIZER = new JsonSerializer();
 
-    public static final Deserializer<String> DESERIALIZER = new JsonDeserializer();
+    public static final Deserializer DESERIALIZER = new JsonDeserializer();
 }

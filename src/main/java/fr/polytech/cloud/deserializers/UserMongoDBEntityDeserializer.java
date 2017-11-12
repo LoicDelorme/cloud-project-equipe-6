@@ -43,8 +43,8 @@ public class UserMongoDBEntityDeserializer extends StdDeserializer<UserMongoDBEn
         Double lon = null;
         if (node.has("position")) {
             final JsonNode positionNode = node.get("position");
-            lat = positionNode.has("lat") ? ((DoubleNode) positionNode.get("lat")).doubleValue() : null;
-            lon = positionNode.has("lon") ? ((DoubleNode) positionNode.get("lon")).doubleValue() : null;
+            lat = positionNode.has("lat") && positionNode.get("lat").isDouble() ? ((DoubleNode) positionNode.get("lat")).doubleValue() : null;
+            lon = positionNode.has("lon") && positionNode.get("lon").isDouble() ? ((DoubleNode) positionNode.get("lon")).doubleValue() : null;
         }
 
         final PositionMongoDBEntity position = new PositionMongoDBEntity();

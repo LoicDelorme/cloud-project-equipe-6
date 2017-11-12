@@ -47,8 +47,8 @@ public class AbstractMongoDBDaoServices<T extends AbstractMongoDBEntity> impleme
     }
 
     @Override
-    public List<T> getAllWhere(final String parameters) throws Exception {
-        final MongoCursor<T> mongoCursor = this.mongoCollection.find(parameters).as(this.entityClass);
+    public List<T> getAllWhere(final String query, Object... parameters) throws Exception {
+        final MongoCursor<T> mongoCursor = this.mongoCollection.find(query, parameters).as(this.entityClass);
 
         final List<T> entities = new ArrayList<T>();
         mongoCursor.forEach(entity -> entities.add(entity));
@@ -58,8 +58,8 @@ public class AbstractMongoDBDaoServices<T extends AbstractMongoDBEntity> impleme
     }
 
     @Override
-    public List<T> getAllWhereWithLimit(final String parameters, final int initialOffset, final int nbEntities) throws Exception {
-        final MongoCursor<T> mongoCursor = this.mongoCollection.find(parameters).skip(initialOffset).limit(nbEntities).as(this.entityClass);
+    public List<T> getAllWhereWithLimit(final String query, final int initialOffset, final int nbEntities, Object... parameters) throws Exception {
+        final MongoCursor<T> mongoCursor = this.mongoCollection.find(query, parameters).skip(initialOffset).limit(nbEntities).as(this.entityClass);
 
         final List<T> entities = new ArrayList<T>();
         mongoCursor.forEach(entity -> entities.add(entity));
