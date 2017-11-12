@@ -39,17 +39,17 @@ public class UserMongoDBEntityDeserializer extends StdDeserializer<UserMongoDBEn
         } catch (Exception e) {
             birthDay = null;
         }
-        Double lat = null;
         Double lon = null;
+        Double lat = null;
         if (node.has("position")) {
             final JsonNode positionNode = node.get("position");
-            lat = positionNode.has("lat") && positionNode.get("lat").isDouble() ? ((DoubleNode) positionNode.get("lat")).doubleValue() : null;
             lon = positionNode.has("lon") && positionNode.get("lon").isDouble() ? ((DoubleNode) positionNode.get("lon")).doubleValue() : null;
+            lat = positionNode.has("lat") && positionNode.get("lat").isDouble() ? ((DoubleNode) positionNode.get("lat")).doubleValue() : null;
         }
 
         final PositionMongoDBEntity position = new PositionMongoDBEntity();
         position.setType("Point");
-        position.setCoordinates(node.has("position") ? Arrays.asList(lat, lon) : null);
+        position.setCoordinates(node.has("position") ? Arrays.asList(lon, lat) : null);
 
         final UserMongoDBEntity user = new UserMongoDBEntity();
         user.setId(id);
