@@ -1,6 +1,6 @@
 package fr.polytech.cloud.serializers;
 
-public interface Serializer<O> {
+public interface Serializer {
 
-    public <I> O to(I in);
+    public <I> String to(I in) throws Exception;
 }
