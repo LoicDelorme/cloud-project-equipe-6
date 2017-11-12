@@ -16,7 +16,7 @@ import java.util.Date;
 
 public class UserMongoDBEntityDeserializer extends StdDeserializer<UserMongoDBEntity> {
 
-    public static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("dd/MM/yyyy");
+    public static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("MM/dd/yyyy");
 
     public UserMongoDBEntityDeserializer() {
         this(null);

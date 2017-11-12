@@ -13,7 +13,7 @@ import java.util.List;
 
 public class UserMongoDBEntitySerializer extends StdSerializer<UserMongoDBEntity> {
 
-    public static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("dd/MM/yyyy");
+    public static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("MM/dd/yyyy");
 
     public UserMongoDBEntitySerializer() {
         this(null);

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -32,7 +33,7 @@ public class UserController extends AbstractController {
 
     public static final int DEFAULT_COORDINATES_SIZE = 2;
 
-    public static final List<String> DEFAULT_SUPPORTED_OPERATORS = Arrays.asList("eq", "gt", "gte", "lt", "lte", "ne");
+    public static final List<String> DEFAULT_SUPPORTED_OPERATORS = Arrays.asList("eq", "gt", "gte", "lte", "lt", "ne");
 
     public static final int DEFAULT_SUPPORTED_OPERATORS_NUMBER = 1;
 
@@ -152,20 +153,39 @@ public class UserController extends AbstractController {
             return new ResponseEntity<String>("Only one operator is supported at the same time!", new HttpHeaders(), HttpStatus.NOT_FOUND);
         }
 
-        final String requestedOperator = requestedOperators.get(0);
+        final String operator = getOperator(requestedOperators.get(0));
         int age;
         try {
-            age = Integer.parseInt(parameters.get(requestedOperator));
+            age = Integer.parseInt(parameters.get(requestedOperators.get(0)));
         } catch (NumberFormatException ex) {
             return new ResponseEntity<String>("Invalid age number!", new HttpHeaders(), HttpStatus.NOT_FOUND);
         }
-        final LocalDate computedDate = LocalDate.now().minusYears(age);
 
-        final String query = String.format(DEFAULT_AGE_SEARCH_PATTERN, requestedOperator);
-        final Date date = new Date(computedDate.getYear(), computedDate.getMonthValue(), computedDate.getDayOfMonth());
+        final String query = String.format(DEFAULT_AGE_SEARCH_PATTERN, operator);
+        final Date date = Date.from(LocalDate.now().minusYears(age).atStartOfDay(ZoneId.systemDefault()).toInstant());
 
         final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWhereWithLimit(query, computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, date);
         return new ResponseEntity<String>(SERIALIZER.to(users), new HttpHeaders(), HttpStatus.OK);
+    }
+
+    private String getOperator(String operator) {
+        if ("gt".equals(operator)) {
+            return "lt";
+        }
+
+        if ("gte".equals(operator)) {
+            return "lte";
+        }
+
+        if ("lt".equals(operator)) {
+            return "gt";
+        }
+
+        if ("lte".equals(operator)) {
+            return "gte";
+        }
+
+        return operator;
     }
 
     @RequestMapping(value = "/user/search", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
