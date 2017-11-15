@@ -8,11 +8,19 @@ public interface DaoServices<T, I> {
 
     public List<T> getAll() throws Exception;
 
+    public List<T> getAll(String sortingCondition) throws Exception;
+
     public List<T> getAllWithLimit(int initialOffset, int nbEntities) throws Exception;
+
+    public List<T> getAllWithLimit(int initialOffset, int nbEntities, String sortingCondition) throws Exception;
 
     public List<T> getAllWhere(String query, Object... parameters) throws Exception;
 
+    public List<T> getAllWhere(String query, String sortingCondition, Object... parameters) throws Exception;
+
     public List<T> getAllWhereWithLimit(String query, int initialOffset, int nbEntities, Object... parameters) throws Exception;
+
+    public List<T> getAllWhereWithLimit(String query, int initialOffset, int nbEntities, String sortingCondition, Object... parameters) throws Exception;
 
     public int count() throws Exception;
 

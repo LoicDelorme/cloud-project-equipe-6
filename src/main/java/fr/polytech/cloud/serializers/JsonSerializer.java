@@ -2,6 +2,7 @@ package fr.polytech.cloud.serializers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import fr.polytech.cloud.entities.UserMongoDBEntity;
 
 public class JsonSerializer implements Serializer {
@@ -14,6 +15,7 @@ public class JsonSerializer implements Serializer {
 
         this.mapper = new ObjectMapper();
         this.mapper.registerModule(simpleModule);
+        this.mapper.setNodeFactory(JsonNodeFactory.withExactBigDecimals(true));
     }
 
     @Override

@@ -8,12 +8,16 @@ import fr.polytech.cloud.entities.PositionMongoDBEntity;
 import fr.polytech.cloud.entities.UserMongoDBEntity;
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class UserMongoDBEntitySerializer extends StdSerializer<UserMongoDBEntity> {
 
-    public static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("MM/dd/yyyy");
+    public static final DateTimeFormatter DATE_PATTERN_IN = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+    public static final DateTimeFormatter DATE_PATTERN_OUT = DateTimeFormatter.ofPattern("MM/dd/yyy");
 
     public UserMongoDBEntitySerializer() {
         this(null);
@@ -26,20 +30,20 @@ public class UserMongoDBEntitySerializer extends StdSerializer<UserMongoDBEntity
     @Override
     public void serialize(final UserMongoDBEntity userMongoDBEntity, final JsonGenerator jsonGenerator, final SerializerProvider serializerProvider) throws IOException {
         final PositionMongoDBEntity position = userMongoDBEntity.getPosition();
-        final List<Double> coordinates = position == null ? null : position.getCoordinates();
-        final Double lon = (coordinates == null || coordinates.isEmpty()) ? null : coordinates.get(UserController.DEFAULT_COORDINATES_LON_OFFSET);
-        final Double lat = (coordinates == null || coordinates.size() != UserController.DEFAULT_COORDINATES_SIZE) ? null : coordinates.get(UserController.DEFAULT_COORDINATES_LAT_OFFSET);
+        final List<BigDecimal> coordinates = position == null ? null : position.getCoordinates();
+        final BigDecimal lon = coordinates == null ? null : coordinates.get(UserController.DEFAULT_COORDINATES_LON_OFFSET);
+        final BigDecimal lat = coordinates == null ? null : coordinates.get(UserController.DEFAULT_COORDINATES_LAT_OFFSET);
 
         jsonGenerator.writeStartObject();
 
-        jsonGenerator.writeStringField("id", userMongoDBEntity.getId());
-        jsonGenerator.writeStringField("lastName", userMongoDBEntity.getLastName());
-        jsonGenerator.writeStringField("firstName", userMongoDBEntity.getFirstName());
-        jsonGenerator.writeStringField("birthDay", userMongoDBEntity.getBirthDay() == null ? null : DATE_FORMATTER.format(userMongoDBEntity.getBirthDay()));
+        jsonGenerator.writeObjectField("id", userMongoDBEntity.getId());
+        jsonGenerator.writeObjectField("lastName", userMongoDBEntity.getLastName());
+        jsonGenerator.writeObjectField("firstName", userMongoDBEntity.getFirstName());
+        jsonGenerator.writeObjectField("birthDay", userMongoDBEntity.getBirthDay() == null ? null : LocalDate.parse(userMongoDBEntity.getBirthDay(), DATE_PATTERN_IN).format(DATE_PATTERN_OUT));
 
         jsonGenerator.writeObjectFieldStart("position");
-        jsonGenerator.writeObjectField("lat", lat);
-        jsonGenerator.writeObjectField("lon", lon);
+        jsonGenerator.writeNumberField("lat", lat);
+        jsonGenerator.writeNumberField("lon", lon);
         jsonGenerator.writeEndObject();
 
         jsonGenerator.writeEndObject();

@@ -1,6 +1,7 @@
 package fr.polytech.cloud.controllers;
 
 import fr.polytech.cloud.entities.UserMongoDBEntity;
+import fr.polytech.cloud.serializers.UserMongoDBEntitySerializer;
 import fr.polytech.cloud.services.UserMongoDBDaoServices;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -10,10 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,24 +31,24 @@ public class UserController extends AbstractController {
 
     public static final int DEFAULT_COORDINATES_LAT_OFFSET = 1;
 
-    public static final int DEFAULT_COORDINATES_SIZE = 2;
-
     public static final List<String> DEFAULT_SUPPORTED_OPERATORS = Arrays.asList("eq", "gt", "gte", "lte", "lt", "ne");
 
     public static final int DEFAULT_SUPPORTED_OPERATORS_NUMBER = 1;
 
-    public static final String DEFAULT_AGE_SEARCH_PATTERN = "{birthDay : {$%s: #}}";
+    public static final String DEFAULT_AGE_SEARCH_PATTERN = "{birthDay: {$%s: '%s'}}";
 
-    public static final String DEFAULT_LASTNAME_SEARCH_PATTERN = "{lastName : '%s'}";
+    public static final String DEFAULT_LAST_NAME_SEARCH_PATTERN = "{lastName: '%s'}";
 
-    public static final String DEFAULT_LOCATION_SEARCH_PATTERN = "{position: {$near: {$geometry: {type: \"Point\" , coordinates: [%s,%s]}}}}";
+    public static final String DEFAULT_LOCATION_SEARCH_PATTERN = "{position: {$near: {$geometry: {type: 'Point' , coordinates: [%s,%s]}}}}";
+
+    public static final String DEFAULT_SORTING_CONDITION = "{lastName: -1}";
 
     @Autowired
     private UserMongoDBDaoServices userMongoDBDaoServices;
 
     @RequestMapping(value = "/user", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity<String> getAllUsers(@RequestParam(defaultValue = "" + DEFAULT_PAGE, value = "page") String page) throws Exception {
-        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWithLimit(computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE);
+        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWithLimit(computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_SORTING_CONDITION);
         return new ResponseEntity<String>(SERIALIZER.to(users), new HttpHeaders(), HttpStatus.OK);
     }
 
@@ -114,16 +114,16 @@ public class UserController extends AbstractController {
         final String id = from.getId() == null ? into.getId() : from.getId();
         final String lastName = from.getLastName() == null ? into.getLastName() : from.getLastName();
         final String firstName = from.getFirstName() == null ? into.getFirstName() : from.getFirstName();
-        final Date birthDay = from.getBirthDay() == null ? into.getBirthDay() : from.getBirthDay();
+        final String birthDay = from.getBirthDay() == null ? into.getBirthDay() : from.getBirthDay();
 
-        final List<Double> fromCoordinates = from.getPosition() == null ? null : from.getPosition().getCoordinates();
-        final List<Double> intoCoordinates = into.getPosition() == null ? null : into.getPosition().getCoordinates();
-        final Double fromLon = (fromCoordinates == null || fromCoordinates.size() != DEFAULT_COORDINATES_SIZE) ? null : fromCoordinates.get(DEFAULT_COORDINATES_LON_OFFSET);
-        final Double intoLon = (intoCoordinates == null || intoCoordinates.size() != DEFAULT_COORDINATES_SIZE) ? null : intoCoordinates.get(DEFAULT_COORDINATES_LON_OFFSET);
-        final Double fromLat = (fromCoordinates == null || fromCoordinates.isEmpty()) ? null : fromCoordinates.get(DEFAULT_COORDINATES_LAT_OFFSET);
-        final Double intoLat = (intoCoordinates == null || intoCoordinates.isEmpty()) ? null : intoCoordinates.get(DEFAULT_COORDINATES_LAT_OFFSET);
-        final Double lon = fromLon == null ? intoLon : fromLon;
-        final Double lat = fromLat == null ? intoLat : fromLat;
+        final List<BigDecimal> fromCoordinates = from.getPosition() == null ? null : from.getPosition().getCoordinates();
+        final List<BigDecimal> intoCoordinates = into.getPosition() == null ? null : into.getPosition().getCoordinates();
+        final BigDecimal fromLon = fromCoordinates == null ? null : fromCoordinates.get(DEFAULT_COORDINATES_LON_OFFSET);
+        final BigDecimal intoLon = intoCoordinates == null ? null : intoCoordinates.get(DEFAULT_COORDINATES_LON_OFFSET);
+        final BigDecimal fromLat = fromCoordinates == null ? null : fromCoordinates.get(DEFAULT_COORDINATES_LAT_OFFSET);
+        final BigDecimal intoLat = intoCoordinates == null ? null : intoCoordinates.get(DEFAULT_COORDINATES_LAT_OFFSET);
+        final BigDecimal lon = fromLon == null ? intoLon : fromLon;
+        final BigDecimal lat = fromLat == null ? intoLat : fromLat;
 
         into.setId(id);
         into.setLastName(lastName);
@@ -148,51 +148,30 @@ public class UserController extends AbstractController {
 
     @RequestMapping(value = "/user/age", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity<String> searchByAge(@RequestParam(defaultValue = "" + DEFAULT_PAGE, value = "page") String page, @RequestParam Map<String, String> parameters) throws Exception {
-        final List<String> requestedOperators = DEFAULT_SUPPORTED_OPERATORS.stream().filter(parameters.keySet()::contains).collect(Collectors.toList());
-        if (requestedOperators.size() != DEFAULT_SUPPORTED_OPERATORS_NUMBER) {
+        final List<String> operators = DEFAULT_SUPPORTED_OPERATORS.stream().filter(parameters.keySet()::contains).collect(Collectors.toList());
+        if (operators.size() != DEFAULT_SUPPORTED_OPERATORS_NUMBER) {
             return new ResponseEntity<String>("Only one operator is supported at the same time!", new HttpHeaders(), HttpStatus.NOT_FOUND);
         }
 
-        final String operator = getOperator(requestedOperators.get(0));
+        final String operator = operators.get(0);
         int age;
         try {
-            age = Integer.parseInt(parameters.get(requestedOperators.get(0)));
+            age = Integer.parseInt(parameters.get(operators.get(0)));
         } catch (NumberFormatException ex) {
             return new ResponseEntity<String>("Invalid age number!", new HttpHeaders(), HttpStatus.NOT_FOUND);
         }
+        final String date = LocalDate.now().minusYears(age).format(UserMongoDBEntitySerializer.DATE_PATTERN_IN);
+        final String query = String.format(DEFAULT_AGE_SEARCH_PATTERN, operator, date);
 
-        final String query = String.format(DEFAULT_AGE_SEARCH_PATTERN, operator);
-        final Date date = Date.from(LocalDate.now().minusYears(age).atStartOfDay(ZoneId.systemDefault()).toInstant());
-
-        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWhereWithLimit(query, computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, date);
+        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWhereWithLimit(query, computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE);
         return new ResponseEntity<String>(SERIALIZER.to(users), new HttpHeaders(), HttpStatus.OK);
-    }
-
-    private String getOperator(String operator) {
-        if ("gt".equals(operator)) {
-            return "lt";
-        }
-
-        if ("gte".equals(operator)) {
-            return "lte";
-        }
-
-        if ("lt".equals(operator)) {
-            return "gt";
-        }
-
-        if ("lte".equals(operator)) {
-            return "gte";
-        }
-
-        return operator;
     }
 
     @RequestMapping(value = "/user/search", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity<String> searchByLastname(@RequestParam(defaultValue = "" + DEFAULT_PAGE, value = "page") String page, @RequestParam(value = "term") String term) throws Exception {
-        final String query = String.format(DEFAULT_LASTNAME_SEARCH_PATTERN, term);
+        final String query = String.format(DEFAULT_LAST_NAME_SEARCH_PATTERN, term);
 
-        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWhereWithLimit(query, computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE);
+        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWhereWithLimit(query, computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_SORTING_CONDITION);
         return new ResponseEntity<String>(SERIALIZER.to(users), new HttpHeaders(), HttpStatus.OK);
     }
 
@@ -200,7 +179,7 @@ public class UserController extends AbstractController {
     public ResponseEntity<String> nearest(@RequestParam(defaultValue = "" + DEFAULT_PAGE, value = "page") String page, @RequestParam(value = "lon") String lon, @RequestParam(value = "lat") String lat) throws Exception {
         final String query = String.format(DEFAULT_LOCATION_SEARCH_PATTERN, lon, lat);
 
-        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWhereWithLimit(query, computePage(page) * DEFAULT_NEAREST_PAGE_SIZE, DEFAULT_NEAREST_PAGE_SIZE);
+        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWhereWithLimit(query, computePage(page) * DEFAULT_NEAREST_PAGE_SIZE, DEFAULT_NEAREST_PAGE_SIZE, DEFAULT_SORTING_CONDITION);
         return new ResponseEntity<String>(SERIALIZER.to(users), new HttpHeaders(), HttpStatus.OK);
     }
 }

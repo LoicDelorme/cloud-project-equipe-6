@@ -4,8 +4,6 @@ import lombok.Data;
 import org.jongo.marshall.jackson.oid.MongoId;
 import org.jongo.marshall.jackson.oid.MongoObjectId;
 
-import java.util.Date;
-
 public @Data class UserMongoDBEntity extends AbstractMongoDBEntity {
 
     @MongoId
@@ -16,7 +14,7 @@ public @Data class UserMongoDBEntity extends AbstractMongoDBEntity {
 
     private String firstName;
 
-    private Date birthDay;
+    private String birthDay;
 
     private PositionMongoDBEntity position;
 }

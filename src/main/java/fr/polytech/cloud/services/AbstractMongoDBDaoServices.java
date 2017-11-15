@@ -36,10 +36,32 @@ public class AbstractMongoDBDaoServices<T extends AbstractMongoDBEntity> impleme
     }
 
     @Override
+    public List<T> getAll(final String sortingCondition) throws Exception {
+        final List<T> entities = new ArrayList<T>();
+
+        final MongoCursor<T> mongoCursor = this.mongoCollection.find().sort(sortingCondition).as(this.entityClass);
+        mongoCursor.forEach(entity -> entities.add(entity));
+        mongoCursor.close();
+
+        return entities;
+    }
+
+    @Override
     public List<T> getAllWithLimit(final int initialOffset, final int nbEntities) throws Exception {
         final List<T> entities = new ArrayList<T>();
 
         final MongoCursor<T> mongoCursor = this.mongoCollection.find().skip(initialOffset).limit(nbEntities).as(this.entityClass);
+        mongoCursor.forEach(entity -> entities.add(entity));
+        mongoCursor.close();
+
+        return entities;
+    }
+
+    @Override
+    public List<T> getAllWithLimit(final int initialOffset, final int nbEntities, final String sortingCondition) throws Exception {
+        final List<T> entities = new ArrayList<T>();
+
+        final MongoCursor<T> mongoCursor = this.mongoCollection.find().skip(initialOffset).limit(nbEntities).sort(sortingCondition).as(this.entityClass);
         mongoCursor.forEach(entity -> entities.add(entity));
         mongoCursor.close();
 
@@ -58,8 +80,30 @@ public class AbstractMongoDBDaoServices<T extends AbstractMongoDBEntity> impleme
     }
 
     @Override
+    public List<T> getAllWhere(final String query, final String sortingCondition, final Object... parameters) throws Exception {
+        final MongoCursor<T> mongoCursor = this.mongoCollection.find(query, parameters).sort(sortingCondition).as(this.entityClass);
+
+        final List<T> entities = new ArrayList<T>();
+        mongoCursor.forEach(entity -> entities.add(entity));
+        mongoCursor.close();
+
+        return entities;
+    }
+
+    @Override
     public List<T> getAllWhereWithLimit(final String query, final int initialOffset, final int nbEntities, Object... parameters) throws Exception {
         final MongoCursor<T> mongoCursor = this.mongoCollection.find(query, parameters).skip(initialOffset).limit(nbEntities).as(this.entityClass);
+
+        final List<T> entities = new ArrayList<T>();
+        mongoCursor.forEach(entity -> entities.add(entity));
+        mongoCursor.close();
+
+        return entities;
+    }
+
+    @Override
+    public List<T> getAllWhereWithLimit(final String query, final int initialOffset, final int nbEntities, final String sortingCondition, final Object... parameters) throws Exception {
+        final MongoCursor<T> mongoCursor = this.mongoCollection.find(query, parameters).sort(sortingCondition).skip(initialOffset).limit(nbEntities).as(this.entityClass);
 
         final List<T> entities = new ArrayList<T>();
         mongoCursor.forEach(entity -> entities.add(entity));
