@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
@@ -81,12 +80,16 @@ public class UserController extends AbstractController {
 
     @RequestMapping(value = "/user/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity<String> getOneUser(@PathVariable String id) throws Exception {
-        final UserMongoDBEntity user = this.userMongoDBDaoServices.getOne(id);
-        if (user == null) {
+        try {
+            final UserMongoDBEntity user = this.userMongoDBDaoServices.getOne(id);
+            if (user == null) {
+                return new ResponseEntity<String>("Unknown user!", new HttpHeaders(), HttpStatus.NOT_FOUND);
+            }
+
+            return new ResponseEntity<String>(SERIALIZER.to(user), new HttpHeaders(), HttpStatus.OK);
+        } catch (IllegalArgumentException ex) {
             return new ResponseEntity<String>("Unknown user!", new HttpHeaders(), HttpStatus.NOT_FOUND);
         }
-
-        return new ResponseEntity<String>(SERIALIZER.to(user), new HttpHeaders(), HttpStatus.OK);
     }
 
     @RequestMapping(value = "/user", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
@@ -99,15 +102,19 @@ public class UserController extends AbstractController {
 
     @RequestMapping(value = "/user/{id}", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity<String> putOneUser(@PathVariable String id, @RequestBody String data) throws Exception {
-        final UserMongoDBEntity user = this.userMongoDBDaoServices.getOne(id);
-        if (user == null) {
+        try {
+            final UserMongoDBEntity user = this.userMongoDBDaoServices.getOne(id);
+            if (user == null) {
+                return new ResponseEntity<String>("Unknown user!", new HttpHeaders(), HttpStatus.NOT_FOUND);
+            }
+
+            mergeUserMongoDBEntityFromInto(DESERIALIZER.from(data, UserMongoDBEntity.class), user);
+            this.userMongoDBDaoServices.update(id, user);
+
+            return new ResponseEntity<String>(SERIALIZER.to(user), new HttpHeaders(), HttpStatus.OK);
+        } catch (IllegalArgumentException ex) {
             return new ResponseEntity<String>("Unknown user!", new HttpHeaders(), HttpStatus.NOT_FOUND);
         }
-
-        mergeUserMongoDBEntityFromInto(DESERIALIZER.from(data, UserMongoDBEntity.class), user);
-        this.userMongoDBDaoServices.update(id, user);
-
-        return new ResponseEntity<String>(SERIALIZER.to(user), new HttpHeaders(), HttpStatus.OK);
     }
 
     private void mergeUserMongoDBEntityFromInto(UserMongoDBEntity from, UserMongoDBEntity into) {
@@ -116,14 +123,14 @@ public class UserController extends AbstractController {
         final String firstName = from.getFirstName() == null ? into.getFirstName() : from.getFirstName();
         final String birthDay = from.getBirthDay() == null ? into.getBirthDay() : from.getBirthDay();
 
-        final List<BigDecimal> fromCoordinates = from.getPosition() == null ? null : from.getPosition().getCoordinates();
-        final List<BigDecimal> intoCoordinates = into.getPosition() == null ? null : into.getPosition().getCoordinates();
-        final BigDecimal fromLon = fromCoordinates == null ? null : fromCoordinates.get(DEFAULT_COORDINATES_LON_OFFSET);
-        final BigDecimal intoLon = intoCoordinates == null ? null : intoCoordinates.get(DEFAULT_COORDINATES_LON_OFFSET);
-        final BigDecimal fromLat = fromCoordinates == null ? null : fromCoordinates.get(DEFAULT_COORDINATES_LAT_OFFSET);
-        final BigDecimal intoLat = intoCoordinates == null ? null : intoCoordinates.get(DEFAULT_COORDINATES_LAT_OFFSET);
-        final BigDecimal lon = fromLon == null ? intoLon : fromLon;
-        final BigDecimal lat = fromLat == null ? intoLat : fromLat;
+        final List<Double> fromCoordinates = from.getPosition() == null ? null : from.getPosition().getCoordinates();
+        final List<Double> intoCoordinates = into.getPosition() == null ? null : into.getPosition().getCoordinates();
+        final Double fromLon = fromCoordinates == null ? null : fromCoordinates.get(DEFAULT_COORDINATES_LON_OFFSET);
+        final Double intoLon = intoCoordinates == null ? null : intoCoordinates.get(DEFAULT_COORDINATES_LON_OFFSET);
+        final Double fromLat = fromCoordinates == null ? null : fromCoordinates.get(DEFAULT_COORDINATES_LAT_OFFSET);
+        final Double intoLat = intoCoordinates == null ? null : intoCoordinates.get(DEFAULT_COORDINATES_LAT_OFFSET);
+        final Double lon = fromLon == null ? intoLon : fromLon;
+        final Double lat = fromLat == null ? intoLat : fromLat;
 
         into.setId(id);
         into.setLastName(lastName);
@@ -137,13 +144,17 @@ public class UserController extends AbstractController {
 
     @RequestMapping(value = "/user/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity<String> deleteOneUser(@PathVariable String id) throws Exception {
-        final UserMongoDBEntity user = this.userMongoDBDaoServices.getOne(id);
-        if (user == null) {
+        try {
+            final UserMongoDBEntity user = this.userMongoDBDaoServices.getOne(id);
+            if (user == null) {
+                return new ResponseEntity<String>("Unknown user!", new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            this.userMongoDBDaoServices.delete(id);
+            return new ResponseEntity<String>(new HttpHeaders(), HttpStatus.NO_CONTENT);
+        } catch (IllegalArgumentException ex) {
             return new ResponseEntity<String>("Unknown user!", new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
-        this.userMongoDBDaoServices.delete(id);
-        return new ResponseEntity<String>(new HttpHeaders(), HttpStatus.NO_CONTENT);
     }
 
     @RequestMapping(value = "/user/age", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
@@ -158,12 +169,12 @@ public class UserController extends AbstractController {
         try {
             age = Integer.parseInt(parameters.get(operators.get(0)));
         } catch (NumberFormatException ex) {
-            return new ResponseEntity<String>("Invalid age number!", new HttpHeaders(), HttpStatus.NOT_FOUND);
+            return new ResponseEntity<String>("Invalid age format!", new HttpHeaders(), HttpStatus.NOT_FOUND);
         }
         final String date = LocalDate.now().minusYears(age).format(UserMongoDBEntitySerializer.DATE_PATTERN_IN);
         final String query = String.format(DEFAULT_AGE_SEARCH_PATTERN, operator, date);
 
-        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWhereWithLimit(query, computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE);
+        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWhereWithLimit(query, computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_SORTING_CONDITION);
         return new ResponseEntity<String>(SERIALIZER.to(users), new HttpHeaders(), HttpStatus.OK);
     }
 
@@ -179,7 +190,7 @@ public class UserController extends AbstractController {
     public ResponseEntity<String> nearest(@RequestParam(defaultValue = "" + DEFAULT_PAGE, value = "page") String page, @RequestParam(value = "lon") String lon, @RequestParam(value = "lat") String lat) throws Exception {
         final String query = String.format(DEFAULT_LOCATION_SEARCH_PATTERN, lon, lat);
 
-        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWhereWithLimit(query, computePage(page) * DEFAULT_NEAREST_PAGE_SIZE, DEFAULT_NEAREST_PAGE_SIZE, DEFAULT_SORTING_CONDITION);
+        final List<UserMongoDBEntity> users = this.userMongoDBDaoServices.getAllWhereWithLimit(query, computePage(page) * DEFAULT_NEAREST_PAGE_SIZE, DEFAULT_NEAREST_PAGE_SIZE);
         return new ResponseEntity<String>(SERIALIZER.to(users), new HttpHeaders(), HttpStatus.OK);
     }
 }

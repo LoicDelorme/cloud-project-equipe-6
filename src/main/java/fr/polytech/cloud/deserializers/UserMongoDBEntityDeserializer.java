@@ -9,7 +9,6 @@ import fr.polytech.cloud.entities.PositionMongoDBEntity;
 import fr.polytech.cloud.entities.UserMongoDBEntity;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -39,14 +38,14 @@ public class UserMongoDBEntityDeserializer extends StdDeserializer<UserMongoDBEn
         final String birthDay = rootNode.has("birthDay") ? LocalDate.parse(rootNode.get("birthDay").asText(), DATE_PATTERN_IN).format(DATE_PATTERN_OUT) : null;
 
         final String type = "Point";
-        BigDecimal lon = null;
-        BigDecimal lat = null;
+        Double lon = null;
+        Double lat = null;
         if (rootNode.has("position")) {
             final JsonNode positionNode = rootNode.get("position");
-            lon = positionNode.has("lon") ? new BigDecimal(positionNode.get("lon").asText()) : null;
-            lat = positionNode.has("lat") ? new BigDecimal(positionNode.get("lat").asText()) : null;
+            lon = positionNode.has("lon") ? Double.parseDouble(positionNode.get("lon").asText()) : null;
+            lat = positionNode.has("lat") ? Double.parseDouble(positionNode.get("lat").asText()) : null;
         }
-        final List<BigDecimal> coordinates = Arrays.asList(lon, lat);
+        final List<Double> coordinates = Arrays.asList(lon, lat);
 
         final PositionMongoDBEntity position = new PositionMongoDBEntity();
         position.setType(type);

@@ -8,7 +8,6 @@ import fr.polytech.cloud.entities.PositionMongoDBEntity;
 import fr.polytech.cloud.entities.UserMongoDBEntity;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -30,9 +29,9 @@ public class UserMongoDBEntitySerializer extends StdSerializer<UserMongoDBEntity
     @Override
     public void serialize(final UserMongoDBEntity userMongoDBEntity, final JsonGenerator jsonGenerator, final SerializerProvider serializerProvider) throws IOException {
         final PositionMongoDBEntity position = userMongoDBEntity.getPosition();
-        final List<BigDecimal> coordinates = position == null ? null : position.getCoordinates();
-        final BigDecimal lon = coordinates == null ? null : coordinates.get(UserController.DEFAULT_COORDINATES_LON_OFFSET);
-        final BigDecimal lat = coordinates == null ? null : coordinates.get(UserController.DEFAULT_COORDINATES_LAT_OFFSET);
+        final List<Double> coordinates = position == null ? null : position.getCoordinates();
+        final Double lon = coordinates == null ? null : coordinates.get(UserController.DEFAULT_COORDINATES_LON_OFFSET);
+        final Double lat = coordinates == null ? null : coordinates.get(UserController.DEFAULT_COORDINATES_LAT_OFFSET);
 
         jsonGenerator.writeStartObject();
 
@@ -42,8 +41,8 @@ public class UserMongoDBEntitySerializer extends StdSerializer<UserMongoDBEntity
         jsonGenerator.writeObjectField("birthDay", userMongoDBEntity.getBirthDay() == null ? null : LocalDate.parse(userMongoDBEntity.getBirthDay(), DATE_PATTERN_IN).format(DATE_PATTERN_OUT));
 
         jsonGenerator.writeObjectFieldStart("position");
-        jsonGenerator.writeNumberField("lat", lat);
-        jsonGenerator.writeNumberField("lon", lon);
+        jsonGenerator.writeObjectField("lat", lat);
+        jsonGenerator.writeObjectField("lon", lon);
         jsonGenerator.writeEndObject();
 
         jsonGenerator.writeEndObject();
