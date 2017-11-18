@@ -1,10 +1,10 @@
-package fr.polytech.cloud.entities;
+package fr.polytech.cloud.entities.dao;
 
 import lombok.Data;
 
 import java.util.List;
 
-public @Data class PositionMongoDBEntity {
+public @Data class PositionDao {
 
     private String type;
 

@@ -1,6 +1,6 @@
 package fr.polytech.cloud.services;
 
-import fr.polytech.cloud.entities.AbstractMongoDBEntity;
+import fr.polytech.cloud.entities.AbstractEntity;
 import org.bson.types.ObjectId;
 import org.jongo.MongoCollection;
 import org.jongo.MongoCursor;
@@ -8,7 +8,7 @@ import org.jongo.MongoCursor;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AbstractMongoDBDaoServices<T extends AbstractMongoDBEntity> implements DaoServices<T, String> {
+public class AbstractMongoDBDaoServices<T extends AbstractEntity> implements DaoServices<T, String> {
 
     private final Class<T> entityClass;
 
