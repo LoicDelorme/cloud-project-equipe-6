@@ -1,8 +1,6 @@
 .idea/*
 .mvn/*
-target/classes/*
-target/generated-sources/*
-target/maven-status/*
+target/*
 *.iml
 *.cmd
 mvnw

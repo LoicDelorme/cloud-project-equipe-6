@@ -4,7 +4,7 @@ import lombok.Data;
 
 public @Data class PositionDto {
 
-    private double lon;
+    private Double lon;
 
-    private double lat;
+    private Double lat;
 }

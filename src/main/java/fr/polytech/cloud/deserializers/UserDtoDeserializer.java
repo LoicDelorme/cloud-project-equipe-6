@@ -29,7 +29,7 @@ public class UserDtoDeserializer extends StdDeserializer<UserDto> {
         final String firstName = rootNode.has("firstName") ? rootNode.get("firstName").asText() : null;
         final String birthDay = rootNode.has("birthDay") ? rootNode.get("birthDay").asText() : null;
         final Double lon = rootNode.has("position") && rootNode.get("position").has("lon") ? Double.parseDouble(rootNode.get("position").get("lon").asText()) : null;
-        final Double lat = rootNode.has("position") && rootNode.get("position").has("lat") ? Double.parseDouble(rootNode.get("position").get("lon").asText()) : null;
+        final Double lat = rootNode.has("position") && rootNode.get("position").has("lat") ? Double.parseDouble(rootNode.get("position").get("lat").asText()) : null;
 
         final PositionDto position = new PositionDto();
         position.setLon(lon);

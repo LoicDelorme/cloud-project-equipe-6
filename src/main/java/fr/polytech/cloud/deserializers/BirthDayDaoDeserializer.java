@@ -27,11 +27,6 @@ public class BirthDayDaoDeserializer extends StdDeserializer<String> {
     @Override
     public String deserialize(final JsonParser jsonParser, final DeserializationContext deserializationContext) throws IOException, JsonProcessingException {
         final JsonNode rootNode = jsonParser.getCodec().readTree(jsonParser);
-
-        if (rootNode.has("birthDay")) {
-            return LocalDate.parse(rootNode.get("birthDay").asText(), DATE_PATTERN_IN).format(DATE_PATTERN_OUT);
-        }
-
-        return null;
+        return LocalDate.parse(rootNode.asText(), DATE_PATTERN_IN).format(DATE_PATTERN_OUT);
     }
 }
