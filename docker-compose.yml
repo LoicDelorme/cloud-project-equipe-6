@@ -1,0 +1,21 @@
+version: '2'
+services:
+  mongo-db-container:
+    container_name: "mongo-db-container"
+    image: mongo
+    volumes:
+      - "./.data/mongo:/data/mongo"
+    ports:
+      - "27017:27017"
+    restart: always
+
+  users-application-container:
+    container_name: "users-application-container"
+    depends_on:
+      - mongo-db-container
+    image: springboot-users
+    links:
+      - mongo-db-container
+    ports:
+      - "80:8080"
+    restart: always
