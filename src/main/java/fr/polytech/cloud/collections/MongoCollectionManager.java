@@ -17,7 +17,7 @@ public class MongoCollectionManager {
     private MongoCollectionManager() {
     }
 
-    public static MongoCollection getMongoCollection(String hostname, int port, String databaseName, String collectionName) {
+    public static MongoCollection getMongoCollection(final String hostname, final int port, final String databaseName, final String collectionName) {
         synchronized (lock) {
             final String key = databaseName + "-" + collectionName;
             if (!mongoCollections.containsKey(key)) {
