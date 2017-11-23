@@ -1,15 +1,13 @@
 package fr.polytech.cloud;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.polytech.cloud.controllers.UserController;
 import fr.polytech.cloud.entities.dao.PositionDao;
 import fr.polytech.cloud.entities.dao.UserDao;
 import fr.polytech.cloud.entities.dto.PositionDto;
 import fr.polytech.cloud.entities.dto.UserDto;
+import fr.polytech.cloud.serializers.BirthDayDtoSerializer;
 import fr.polytech.cloud.services.UserMongoDBDaoServices;
-import org.apache.catalina.User;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
@@ -23,18 +21,25 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
+import javax.json.bind.Jsonb;
+import javax.json.bind.JsonbBuilder;
+import javax.json.bind.JsonbConfig;
+import javax.json.bind.config.PropertyOrderStrategy;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration
 @WebAppConfiguration
 @EnableWebMvc
-
 public class UserControllerTest {
 
     @Mock
@@ -44,343 +49,275 @@ public class UserControllerTest {
     private UserController userController;
 
     private MockMvc mockMvc;
-    private ObjectMapper objectMapper;
 
-    private final PositionDao position = new PositionDao();
-    private final PositionDao position2 = new PositionDao();
+    private final Jsonb jsonSerializer = JsonbBuilder.create(new JsonbConfig().withNullValues(true).withPropertyOrderStrategy(PropertyOrderStrategy.ANY));
 
-    private final UserDao user1 = new UserDao();
-    private final UserDao user2 = new UserDao();
+    private final UserDao firstUser = new UserDao();
 
-    final ArrayList<UserDao> userList = new ArrayList();
+    private final UserDao secondUser = new UserDao();
+
+    final List<UserDao> users = new ArrayList<UserDao>();
 
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
-        this.mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
-        this.objectMapper = new ObjectMapper();
+        this.mockMvc = MockMvcBuilders.standaloneSetup(this.userController).build();
 
-        position.setType("Point");
-        position.setCoordinates(Arrays.asList(45.2, 46.2));
+        // Create the first user
+        final PositionDao firstPosition = new PositionDao();
+        firstPosition.setType("Point");
+        firstPosition.setCoordinates(Arrays.asList(46.2, 45.2));
 
-        position2.setType("Point");
-        position2.setCoordinates(Arrays.asList(20.28, 21.24));
+        this.firstUser.setId("5a0c11c0c98029367ea329e8");
+        this.firstUser.setLastName("FIRST");
+        this.firstUser.setFirstName("user");
+        this.firstUser.setBirthDay("11/19/2000");
+        this.firstUser.setPosition(firstPosition);
 
-        user1.setId("5a0c11c0c98029367ea329e8");
-        user1.setLastName("TEST");
-        user1.setFirstName("test");
-        user1.setBirthDay("11/19/2000");
-        user1.setPosition(position);
+        // Create the second user
+        final PositionDao secondPosition = new PositionDao();
+        secondPosition.setType("Point");
+        secondPosition.setCoordinates(Arrays.asList(20.28, 21.24));
 
-        user2.setId("5a0c11c0c98029367b789745");
-        user2.setLastName("LOL");
-        user2.setFirstName("lol");
-        user2.setBirthDay("11/19/2017");
-        user2.setPosition(position2);
+        this.secondUser.setId("5a0c11c0c98029367b789745");
+        this.secondUser.setLastName("SECOND");
+        this.secondUser.setFirstName("user");
+        this.secondUser.setBirthDay("11/19/2017");
+        this.secondUser.setPosition(secondPosition);
 
-        userList.add(user1);
-        userList.add(user2);
+        this.users.add(this.firstUser);
+        this.users.add(this.secondUser);
     }
 
     @Test
     public void testGetAllUsersWithoutUsers() throws Exception {
-        final ArrayList<UserDao> expectedUserList = new ArrayList();
+        final List<UserDao> expectedUsers = new ArrayList<UserDao>();
 
-        when(this.userMongoDBDaoServices.getAll(UserDao.class)).thenReturn(new ArrayList<UserDao>());
-        this.mockMvc.perform(get("/user")).andExpect(status().isOk()).andExpect(content().string(expectedUserList.toString()));
+        when(this.userMongoDBDaoServices.getAllWithLimit(0 * UserController.DEFAULT_PAGE, UserController.DEFAULT_PAGE_SIZE, UserController.DEFAULT_SORTING_CONDITION, UserDao.class)).thenReturn(expectedUsers);
+        this.mockMvc.perform(get("/user")).andExpect(status().isOk()).andExpect(content().string(this.jsonSerializer.toJson(expectedUsers)));
     }
 
     @Test
     public void testGetAllUsersWithUsers() throws Exception {
+        final List<UserDao> expectedUsers = this.users;
 
-        String expected = "[";
+        when(this.userMongoDBDaoServices.getAllWithLimit(0 * UserController.DEFAULT_PAGE, UserController.DEFAULT_PAGE_SIZE, UserController.DEFAULT_SORTING_CONDITION, UserDao.class)).thenReturn(expectedUsers);
+        this.mockMvc.perform(get("/user")).andExpect(status().isOk()).andExpect(content().string("[{\"id\":\"5a0c11c0c98029367ea329e8\",\"lastName\":\"FIRST\",\"firstName\":\"user\",\"birthDay\":\"11/19/2000\",\"position\":{\"lat\":45.2,\"lon\":46.2}},{\"id\":\"5a0c11c0c98029367b789745\",\"lastName\":\"SECOND\",\"firstName\":\"user\",\"birthDay\":\"11/19/2017\",\"position\":{\"lat\":21.24,\"lon\":20.28}}]"));
+    }
 
-        for (UserDao user : userList) {
-            expected += this.objectMapper.writeValueAsString(user);
-            if(userList.get(userList.size()-1) != user){
-                expected += ",";
-            }
-        }
-        expected += "]";
+    @Test
+    public void testGetAllUsersWithUsersWithPagination() throws Exception {
+        final List<UserDao> expectedUsers = new ArrayList<UserDao>();
 
-        when(this.userMongoDBDaoServices.getAllWithLimit(0,100, "{lastName: -1}",UserDao.class)).thenReturn(userList);
-        this.mockMvc.perform(get("/user")).andExpect(status().isOk()).andExpect(content().string(expected));
+        when(this.userMongoDBDaoServices.getAllWithLimit(1 * UserController.DEFAULT_PAGE, UserController.DEFAULT_PAGE_SIZE, UserController.DEFAULT_SORTING_CONDITION, UserDao.class)).thenReturn(expectedUsers);
+        this.mockMvc.perform(get("/user").param("page", "1")).andExpect(status().isOk()).andExpect(content().string(this.jsonSerializer.toJson(expectedUsers)));
     }
 
     @Test
     public void testGetOneUserWithCorrectId() throws Exception {
-
-        final String expected = this.objectMapper.writeValueAsString(user1);
-
-        when(this.userMongoDBDaoServices.getOne("5a0c11c0c98029367ea329e8", UserDao.class)).thenReturn(user1);
-        this.mockMvc.perform(get("/user/5a0c11c0c98029367ea329e8")).andExpect(status().isOk()).andExpect(content().string(expected));
+        when(this.userMongoDBDaoServices.getOne("5a0c11c0c98029367ea329e8", UserDao.class)).thenReturn(this.firstUser);
+        this.mockMvc.perform(get("/user/5a0c11c0c98029367ea329e8")).andExpect(status().isOk()).andExpect(content().string("{\"id\":\"5a0c11c0c98029367ea329e8\",\"lastName\":\"FIRST\",\"firstName\":\"user\",\"birthDay\":\"11/19/2000\",\"position\":{\"lat\":45.2,\"lon\":46.2}}"));
     }
 
     @Test
     public void testGetOneUserWithUnknownId() throws Exception {
-
-        final String expected = "Unknown user for the provided ID!";
-
-        when(this.userMongoDBDaoServices.getOne("5a0c11c0c98029367ea329e8", UserDao.class)).thenReturn(user1);
-        this.mockMvc.perform(get("/user/5a0c11c0c98029367ea32955")).andExpect(status().isNotFound()).andExpect(content().string(expected));
+        when(this.userMongoDBDaoServices.getOne("5a0c11c0c98029367ea32955", UserDao.class)).thenReturn(null);
+        this.mockMvc.perform(get("/user/5a0c11c0c98029367ea32955")).andExpect(status().isNotFound());
     }
 
-    //To Fix : Invalid ID
-
     @Test
-    public void testDeleteAllUsersWithUsers() throws Exception {
-
-        when(userMongoDBDaoServices.getAllWithLimit(0,100, "{lastName: -1}",UserDao.class)).thenReturn(this.userList);
-        doNothing().when(userMongoDBDaoServices).deleteAll();
-
-        mockMvc.perform(delete("/user")).andExpect(status().isOk());
+    public void testGetOneUserWithInvalidId() throws Exception {
+        when(this.userMongoDBDaoServices.getOne("fakeId", UserDao.class)).thenThrow(new IllegalArgumentException());
+        this.mockMvc.perform(get("/user/fakeId")).andExpect(status().isNotFound());
     }
 
     @Test
     public void testDeleteAllUsersWithoutUsers() throws Exception {
+        when(this.userMongoDBDaoServices.getAllWithLimit(0 * UserController.DEFAULT_PAGE, UserController.DEFAULT_PAGE_SIZE, UserController.DEFAULT_SORTING_CONDITION, UserDao.class)).thenReturn(new ArrayList<UserDao>());
+        doNothing().when(this.userMongoDBDaoServices).deleteAll();
 
-        when(userMongoDBDaoServices.getAllWithLimit(0,100, "{lastName: -1}",UserDao.class)).thenReturn(new ArrayList<>());
-        doNothing().when(userMongoDBDaoServices).deleteAll();
-
-        mockMvc.perform(delete("/user")).andExpect(status().isOk());
+        this.mockMvc.perform(delete("/user")).andExpect(status().isOk());
     }
 
     @Test
-    public void testDeleteUserFound() throws Exception {
+    public void testDeleteAllUsersWithUsers() throws Exception {
+        when(this.userMongoDBDaoServices.getAllWithLimit(0 * UserController.DEFAULT_PAGE, UserController.DEFAULT_PAGE_SIZE, UserController.DEFAULT_SORTING_CONDITION, UserDao.class)).thenReturn(this.users);
+        doNothing().when(this.userMongoDBDaoServices).deleteAll();
 
-        when(userMongoDBDaoServices.getOne(user1.getId(), UserDao.class)).thenReturn(user1);
-        doNothing().when(userMongoDBDaoServices).delete(user1.getId());
-
-        mockMvc.perform(delete("/user/5a0c11c0c98029367ea329e8")).andExpect(status().is(204));
+        this.mockMvc.perform(delete("/user")).andExpect(status().isOk());
     }
 
     @Test
-    public void testDeleteUserNotFound() throws Exception {
+    public void testDeleteUserWithCorrectId() throws Exception {
+        when(this.userMongoDBDaoServices.getOne("5a0c11c0c98029367ea329e8", UserDao.class)).thenReturn(this.firstUser);
+        doNothing().when(this.userMongoDBDaoServices).delete("5a0c11c0c98029367ea329e8");
 
-        when(userMongoDBDaoServices.getOne(user1.getId(), UserDao.class)).thenReturn(user1);
-        doNothing().when(userMongoDBDaoServices).delete(user1.getId());
-
-        mockMvc.perform(delete("/user/5a0c11c0c98029367ea34444")).andExpect(status().is(500));
+        this.mockMvc.perform(delete("/user/5a0c11c0c98029367ea329e8")).andExpect(status().is(204));
     }
 
     @Test
-    public void testUpdateUserFound() throws Exception {
+    public void testDeleteUserWithUnknownId() throws Exception {
+        when(this.userMongoDBDaoServices.getOne("5a0c11c0c98029367ea32955", UserDao.class)).thenReturn(null);
+        doNothing().when(this.userMongoDBDaoServices).delete("5a0c11c0c98029367ea32955");
 
-        PositionDto posDto = new PositionDto();
-        posDto.setLat(45.56);
-        posDto.setLon(48.23);
-
-        UserDto userDto = new UserDto();
-        userDto.setId(user1.getId());
-        userDto.setBirthDay(user1.getBirthDay());
-        userDto.setFirstName(user2.getFirstName());
-        userDto.setLastName(user2.getLastName());
-        userDto.setPosition(posDto);
-
-        when(userMongoDBDaoServices.getOne(user1.getId(), UserDao.class)).thenReturn(user1);
-        doNothing().when(userMongoDBDaoServices).update(user1.getId(), userDto);
-
-        mockMvc.perform(
-                put("/user/5a0c11c0c98029367ea329e8", userDto)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(this.objectMapper.writeValueAsString(user1)))
-                .andExpect(status().isOk());
+        this.mockMvc.perform(delete("/user/5a0c11c0c98029367ea32955")).andExpect(status().is(500));
     }
 
     @Test
-    public void testUpdateUserNotFoundUnknownId() throws Exception {
+    public void testDeleteUserWithInvalidId() throws Exception {
+        when(this.userMongoDBDaoServices.getOne("fakeId", UserDao.class)).thenThrow(new IllegalArgumentException());
+        doNothing().when(this.userMongoDBDaoServices).delete("fakeId");
 
-        PositionDto posDto = new PositionDto();
-        posDto.setLat(45.56);
-        posDto.setLon(48.23);
-
-        UserDto userDto = new UserDto();
-        userDto.setId(user1.getId());
-        userDto.setBirthDay(user1.getBirthDay());
-        userDto.setFirstName(user2.getFirstName());
-        userDto.setLastName(user2.getLastName());
-        userDto.setPosition(posDto);
-
-        String expected = "Unknown user for the provided ID!";
-
-        when(userMongoDBDaoServices.getOne(user1.getId(), UserDao.class)).thenReturn(user1);
-        doNothing().when(userMongoDBDaoServices).update("5a0c11c0c98029367ea34444", userDto);
-
-        mockMvc.perform(
-                put("/user/5a0c11c0c98029367ea34444", userDto)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(this.objectMapper.writeValueAsString(user1)))
-                .andExpect(status().isNotFound())
-                .andExpect(content().string(expected));
-    }
-
-    //To fix : Invalid Id
-
-    @Test
-    public void testUpdateListUsersWithUsers() throws Exception {
-
-        ArrayList<UserDto> userListDto = new ArrayList<>();
-
-        PositionDto posDto = new PositionDto();
-        posDto.setLat(45.56);
-        posDto.setLon(48.23);
-
-        UserDto userDto1 = new UserDto();
-        userDto1.setId(user1.getId());
-        userDto1.setBirthDay(user1.getBirthDay());
-        userDto1.setFirstName(user2.getFirstName());
-        userDto1.setLastName(user2.getLastName());
-        userDto1.setPosition(posDto);
-
-        UserDto userDto2 = new UserDto();
-        userDto1.setId(user2.getId());
-        userDto1.setBirthDay(user2.getBirthDay());
-        userDto1.setFirstName(user1.getFirstName());
-        userDto1.setLastName(user1.getLastName());
-        userDto1.setPosition(posDto);
-
-        userListDto.add(userDto1);
-        userListDto.add(userDto2);
-
-        String dataString = "[";
-
-        for (UserDto user : userListDto) {
-            dataString += this.objectMapper.writeValueAsString(user);
-            if(userListDto.get(userListDto.size()-1) != user){
-                dataString += ",";
-            }
-        }
-        dataString += "]";
-
-        when(userMongoDBDaoServices.getAllWithLimit(0,100, "{lastName: -1}",UserDao.class)).thenReturn(this.userList);
-        doNothing().when(userMongoDBDaoServices).deleteAll();
-        doNothing().when(userMongoDBDaoServices).insertAll(userListDto.toArray(new UserDto[userListDto.size()]));
-
-        mockMvc.perform(
-                put("/user", userListDto)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(dataString))
-                .andExpect(status().isCreated());
+        this.mockMvc.perform(delete("/user/fakeId")).andExpect(status().is(500));
     }
 
     @Test
-    public void testUpdateListUsersWithoutUsers() throws Exception {
+    public void testPutOneUserWithCorrectId() throws Exception {
+        final PositionDto newPosition = new PositionDto();
+        newPosition.setLat(45.56);
+        newPosition.setLon(48.23);
 
-        ArrayList<UserDto> userListDto = new ArrayList<>();
+        final UserDto newUser = new UserDto();
+        newUser.setId("5a0c11c0c98029367ea329e8");
+        newUser.setLastName("FIRST_");
+        newUser.setFirstName("user_");
+        newUser.setBirthDay("11/19/2000");
+        newUser.setPosition(newPosition);
 
-        PositionDto posDto = new PositionDto();
-        posDto.setLat(45.56);
-        posDto.setLon(48.23);
+        when(this.userMongoDBDaoServices.getOne("5a0c11c0c98029367ea329e8", UserDao.class)).thenReturn(this.firstUser);
+        doNothing().when(this.userMongoDBDaoServices).update("5a0c11c0c98029367ea329e8", newUser);
 
-        UserDto userDto1 = new UserDto();
-        userDto1.setId(user1.getId());
-        userDto1.setBirthDay(user1.getBirthDay());
-        userDto1.setFirstName(user2.getFirstName());
-        userDto1.setLastName(user2.getLastName());
-        userDto1.setPosition(posDto);
-
-        UserDto userDto2 = new UserDto();
-        userDto1.setId(user2.getId());
-        userDto1.setBirthDay(user2.getBirthDay());
-        userDto1.setFirstName(user1.getFirstName());
-        userDto1.setLastName(user1.getLastName());
-        userDto1.setPosition(posDto);
-
-        userListDto.add(userDto1);
-        userListDto.add(userDto2);
-
-        String dataString = "[";
-
-        for (UserDto user : userListDto) {
-            dataString += this.objectMapper.writeValueAsString(user);
-            if(userListDto.get(userListDto.size()-1) != user){
-                dataString += ",";
-            }
-        }
-        dataString += "]";
-
-        when(userMongoDBDaoServices.getAllWithLimit(0,100, "{lastName: -1}",UserDao.class)).thenReturn(new ArrayList<>());
-        doNothing().when(userMongoDBDaoServices).deleteAll();
-        doNothing().when(userMongoDBDaoServices).insertAll(userListDto.toArray(new UserDto[userListDto.size()]));
-
-        mockMvc.perform(
-                put("/user", userListDto)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(dataString))
-                .andExpect(status().isCreated());
+        this.mockMvc.perform(put("/user/5a0c11c0c98029367ea329e8").contentType(MediaType.APPLICATION_JSON_UTF8).content(this.jsonSerializer.toJson(newUser))).andExpect(status().isOk());
     }
 
     @Test
-    public void testCreateUser() throws Exception {
+    public void testPutOneUserWithUnknownId() throws Exception {
+        final PositionDto newPosition = new PositionDto();
+        newPosition.setLat(45.56);
+        newPosition.setLon(48.23);
 
-        PositionDto posDto = new PositionDto();
-        posDto.setLat(45.56);
-        posDto.setLon(48.23);
+        final UserDto newUser = new UserDto();
+        newUser.setId("5a0c11c0c98029367ea32955");
+        newUser.setLastName("FIRST_");
+        newUser.setFirstName("user_");
+        newUser.setBirthDay("11/19/2000");
+        newUser.setPosition(newPosition);
 
-        UserDto userDto1 = new UserDto();
-        userDto1.setId(user1.getId());
-        userDto1.setBirthDay(user1.getBirthDay());
-        userDto1.setFirstName(user2.getFirstName());
-        userDto1.setLastName(user2.getLastName());
-        userDto1.setPosition(posDto);
+        when(this.userMongoDBDaoServices.getOne("5a0c11c0c98029367ea32955", UserDao.class)).thenReturn(null);
+        doNothing().when(this.userMongoDBDaoServices).update("5a0c11c0c98029367ea32955", newUser);
 
-        //To Do : Check if user already exists
-        doNothing().when(userMongoDBDaoServices).insert(userDto1);
-
-        mockMvc.perform(
-                post("/user")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(this.objectMapper.writeValueAsString(userDto1)))
-                .andExpect(status().isCreated());
+        this.mockMvc.perform(put("/user/5a0c11c0c98029367ea32955").contentType(MediaType.APPLICATION_JSON_UTF8).content(this.jsonSerializer.toJson(newUser))).andExpect(status().isNotFound());
     }
 
     @Test
-    @Ignore
-    // To Fix : Parameters
-    public void testSearchByAgeValidAge() throws Exception {
+    public void testPutOneUserWithInvalidId() throws Exception {
+        final PositionDto newPosition = new PositionDto();
+        newPosition.setLat(45.56);
+        newPosition.setLon(48.23);
 
-        String expected = "["+ this.objectMapper.writeValueAsString(user1) + "]";
+        final UserDto newUser = new UserDto();
+        newUser.setId("5a0c11c0c98029367ea329e8");
+        newUser.setLastName("FIRST_");
+        newUser.setFirstName("user_");
+        newUser.setBirthDay("11/19/2000");
+        newUser.setPosition(newPosition);
 
-        when(this.userMongoDBDaoServices.getAllWhereWithLimit(String.format("{birthDay: {$%s: '%s'}}", "gt", "20020101") ,0,100, "{lastName: -1}",UserDao.class)).thenReturn(userList);
-        this.mockMvc.perform(
-                get("/user/age")
-                .param("gt", "15"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(expected));
+        when(this.userMongoDBDaoServices.getOne("fakeId", UserDao.class)).thenThrow(new IllegalArgumentException());
+        doNothing().when(this.userMongoDBDaoServices).update("fakeId", newUser);
+
+        this.mockMvc.perform(put("/user/fakeId").contentType(MediaType.APPLICATION_JSON_UTF8).content(this.jsonSerializer.toJson(newUser))).andExpect(status().isNotFound());
     }
 
     @Test
-    public void testSearchByLastName() throws Exception {
+    public void putAllUsersWithUsers() throws Exception {
+        final List<UserDto> users = new ArrayList<UserDto>();
 
-        String expected = "["+ this.objectMapper.writeValueAsString(user2) + "]";
-        ArrayList<UserDao> testList = new ArrayList<>();
-        testList.add(user2);
+        final PositionDto firstNewPosition = new PositionDto();
+        firstNewPosition.setLat(45.56);
+        firstNewPosition.setLon(48.23);
 
-        when(this.userMongoDBDaoServices.getAllWhereWithLimit(String.format("{lastName: '%s'}", "LOL"), 0,100, "{lastName: -1}",UserDao.class)).thenReturn(testList);
-        this.mockMvc.perform(
-                get("/user/search")
-                        .param("term", "LOL"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(expected));
+        final UserDto firstNewUser = new UserDto();
+        firstNewUser.setId("5a0c11c0c98029367ea329e8");
+        firstNewUser.setLastName("FIRST");
+        firstNewUser.setFirstName("user");
+        firstNewUser.setBirthDay("11/19/2000");
+        firstNewUser.setPosition(firstNewPosition);
+
+        final PositionDto secondNewPosition = new PositionDto();
+        secondNewPosition.setLat(45.56);
+        secondNewPosition.setLon(48.23);
+
+        final UserDto secondNewUser = new UserDto();
+        secondNewUser.setId("5a0c11c0c98029367b789745");
+        secondNewUser.setLastName("SECOND");
+        secondNewUser.setFirstName("user");
+        secondNewUser.setBirthDay("11/19/2017");
+        secondNewUser.setPosition(firstNewPosition);
+
+        users.add(firstNewUser);
+        users.add(secondNewUser);
+
+        when(userMongoDBDaoServices.getAllWithLimit(0 * UserController.DEFAULT_PAGE, UserController.DEFAULT_PAGE_SIZE, UserController.DEFAULT_SORTING_CONDITION, UserDao.class)).thenReturn(this.users);
+        doNothing().when(this.userMongoDBDaoServices).deleteAll();
+        doNothing().when(this.userMongoDBDaoServices).insertAll(users.toArray(new UserDto[users.size()]));
+
+        this.mockMvc.perform(put("/user").contentType(MediaType.APPLICATION_JSON_UTF8).content(this.jsonSerializer.toJson(users))).andExpect(status().isCreated());
     }
 
     @Test
-    @Ignore
-    // To Fix : Empty return
-    public void testSearchNearest() throws Exception {
+    public void putAllUsersWithoutUsers() throws Exception {
+        final List<UserDao> users = new ArrayList<UserDao>();
+        when(userMongoDBDaoServices.getAllWithLimit(0 * UserController.DEFAULT_PAGE, UserController.DEFAULT_PAGE_SIZE, UserController.DEFAULT_SORTING_CONDITION, UserDao.class)).thenReturn(users);
+        doNothing().when(this.userMongoDBDaoServices).deleteAll();
+        doNothing().when(this.userMongoDBDaoServices).insertAll(new UserDto[0]);
 
-        String expected = "["+ this.objectMapper.writeValueAsString(user2) + "]";
-
-        ArrayList<UserDao> testList = new ArrayList<>();
-        testList.add(user2);
-
-        when(this.userMongoDBDaoServices.getAllWhereWithLimit(String.format("{position: {$near: {$geometry: {type: 'Point' , coordinates: [%s,%s]}}}}", "20.28", "21.24"), 0,100, "{lastName: -1}",UserDao.class)).thenReturn(testList);
-        this.mockMvc.perform(
-                get("/user/nearest")
-                        .param("lon", "20.28")
-                        .param("lat", "21.24"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(expected));
+        this.mockMvc.perform(put("/user").contentType(MediaType.APPLICATION_JSON_UTF8).content(this.jsonSerializer.toJson(users))).andExpect(status().isCreated());
     }
 
+    @Test
+    public void testPostOneUser() throws Exception {
+        final PositionDto newPosition = new PositionDto();
+        newPosition.setLat(45.2);
+        newPosition.setLon(46.2);
+
+        final UserDto newUser = new UserDto();
+        newUser.setId("5a0c11c0c98029367ea329e8");
+        newUser.setLastName("FIRST");
+        newUser.setFirstName("user");
+        newUser.setBirthDay("11/19/2000");
+        newUser.setPosition(newPosition);
+
+        doNothing().when(this.userMongoDBDaoServices).insert(newUser);
+        when(this.userMongoDBDaoServices.getOne("5a0c11c0c98029367ea329e8", UserDao.class)).thenReturn(this.firstUser);
+
+        this.mockMvc.perform(post("/user").contentType(MediaType.APPLICATION_JSON_UTF8).content(this.jsonSerializer.toJson(newUser))).andExpect(status().isCreated());
+    }
+
+    @Test
+    public void testSearchByAge() throws Exception {
+        final String today = LocalDate.now().minusYears(15).format(BirthDayDtoSerializer.DATE_PATTERN_OUT);
+        final List<UserDao> expectedUsers = new ArrayList<UserDao>();
+        expectedUsers.add(this.firstUser);
+
+        when(this.userMongoDBDaoServices.getAllWhereWithLimit(String.format(UserController.DEFAULT_AGE_SEARCH_PATTERN, "lt", today), 0 * UserController.DEFAULT_PAGE, UserController.DEFAULT_PAGE_SIZE, UserController.DEFAULT_SORTING_CONDITION, UserDao.class)).thenReturn(expectedUsers);
+        this.mockMvc.perform(get("/user/age").param("gt", "15")).andExpect(status().isOk()).andExpect(content().string("[{\"id\":\"5a0c11c0c98029367ea329e8\",\"lastName\":\"FIRST\",\"firstName\":\"user\",\"birthDay\":\"11/19/2000\",\"position\":{\"lat\":45.2,\"lon\":46.2}}]"));
+    }
+
+    @Test
+    public void testSearchByLastname() throws Exception {
+        final List<UserDao> expectedUsers = new ArrayList<UserDao>();
+        expectedUsers.add(this.secondUser);
+
+        when(this.userMongoDBDaoServices.getAllWhereWithLimit(String.format(UserController.DEFAULT_LAST_NAME_SEARCH_PATTERN, "SECOND"), 0 * UserController.DEFAULT_PAGE, UserController.DEFAULT_PAGE_SIZE, UserController.DEFAULT_SORTING_CONDITION, UserDao.class)).thenReturn(expectedUsers);
+        this.mockMvc.perform(get("/user/search").param("term", "SECOND")).andExpect(status().isOk()).andExpect(content().string("[{\"id\":\"5a0c11c0c98029367b789745\",\"lastName\":\"SECOND\",\"firstName\":\"user\",\"birthDay\":\"11/19/2017\",\"position\":{\"lat\":21.24,\"lon\":20.28}}]"));
+    }
+
+    @Test
+    public void testNearest() throws Exception {
+        final List<UserDao> expectedUsers = new ArrayList<UserDao>();
+        expectedUsers.add(this.firstUser);
+
+        when(this.userMongoDBDaoServices.getAllWhereWithLimit(String.format(UserController.DEFAULT_LOCATION_SEARCH_PATTERN, "45.2", "46.2"), 0 * UserController.DEFAULT_NEAREST_USERS_PAGE_SIZE, UserController.DEFAULT_NEAREST_USERS_PAGE_SIZE, UserDao.class)).thenReturn(expectedUsers);
+        this.mockMvc.perform(get("/user/nearest").param("lon", "45.2").param("lat", "46.2")).andExpect(status().isOk()).andExpect(content().string("[{\"id\":\"5a0c11c0c98029367ea329e8\",\"lastName\":\"FIRST\",\"firstName\":\"user\",\"birthDay\":\"11/19/2000\",\"position\":{\"lat\":45.2,\"lon\":46.2}}]"));
+    }
 }
