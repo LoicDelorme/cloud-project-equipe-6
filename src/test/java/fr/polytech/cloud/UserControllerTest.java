@@ -294,13 +294,18 @@ public class UserControllerTest {
     }
 
     @Test
-    public void testSearchByAge() throws Exception {
+    public void testSearchByPositiveAge() throws Exception {
         final String today = LocalDate.now().minusYears(15).format(BirthDayDtoSerializer.DATE_PATTERN_OUT);
         final List<UserDao> expectedUsers = new ArrayList<UserDao>();
         expectedUsers.add(this.firstUser);
 
         when(this.userMongoDBDaoServices.getAllWhereWithLimit(String.format(UserController.DEFAULT_AGE_SEARCH_PATTERN, "lt", today), 0 * UserController.DEFAULT_PAGE, UserController.DEFAULT_PAGE_SIZE, UserController.DEFAULT_SORTING_CONDITION, UserDao.class)).thenReturn(expectedUsers);
         this.mockMvc.perform(get("/user/age").param("gt", "15")).andExpect(status().isOk()).andExpect(content().string("[{\"id\":\"5a0c11c0c98029367ea329e8\",\"lastName\":\"FIRST\",\"firstName\":\"user\",\"birthDay\":\"11/19/2000\",\"position\":{\"lat\":45.2,\"lon\":46.2}}]"));
+    }
+
+    @Test
+    public void testSearchByNegativeAge() throws Exception {
+        this.mockMvc.perform(get("/user/age").param("gt", "-15")).andExpect(status().isNotFound());
     }
 
     @Test

@@ -166,9 +166,12 @@ public class UserController extends AbstractController {
         } catch (NumberFormatException ex) {
             return new ResponseEntity("Invalid age format!", HttpStatus.NOT_FOUND);
         }
-        final String date = LocalDate.now().minusYears(age).format(BirthDayDtoSerializer.DATE_PATTERN_OUT);
 
-        final List<UserDao> users = this.userMongoDBDaoServices.getAllWhereWithLimit(String.format(DEFAULT_AGE_SEARCH_PATTERN, queryOperator, date), computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_SORTING_CONDITION, UserDao.class);
+        if (age <= 0) {
+            return new ResponseEntity("Age must be positive!", HttpStatus.NOT_FOUND);
+        }
+
+        final List<UserDao> users = this.userMongoDBDaoServices.getAllWhereWithLimit(String.format(DEFAULT_AGE_SEARCH_PATTERN, queryOperator, LocalDate.now().minusYears(age).format(BirthDayDtoSerializer.DATE_PATTERN_OUT)), computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_SORTING_CONDITION, UserDao.class);
         return new ResponseEntity(users, HttpStatus.OK);
     }
 
