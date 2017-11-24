@@ -7,13 +7,15 @@ services:
       - "./.data/mongo:/data/mongo"
     ports:
       - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE = TP_CLOUD
     restart: always
 
   users-application-container:
     container_name: "users-application-container"
     depends_on:
       - mongo-db-container
-    image: springboot-users
+    image: franckparis/springboot-users
     links:
       - mongo-db-container
     ports:
