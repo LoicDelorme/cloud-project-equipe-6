@@ -152,7 +152,7 @@ public class UserControllerTest {
         when(this.userMongoDBDaoServices.getOne("5a0c11c0c98029367ea329e8", UserDao.class)).thenReturn(this.firstUser);
         doNothing().when(this.userMongoDBDaoServices).delete("5a0c11c0c98029367ea329e8");
 
-        this.mockMvc.perform(delete("/user/5a0c11c0c98029367ea329e8")).andExpect(status().is(204));
+        this.mockMvc.perform(delete("/user/5a0c11c0c98029367ea329e8")).andExpect(status().isNoContent());
     }
 
     @Test
@@ -305,7 +305,7 @@ public class UserControllerTest {
 
     @Test
     public void testSearchByNegativeAge() throws Exception {
-        this.mockMvc.perform(get("/user/age").param("gt", "-15")).andExpect(status().isNotFound());
+        this.mockMvc.perform(get("/user/age").param("gt", "-15")).andExpect(status().isBadRequest());
     }
 
     @Test
