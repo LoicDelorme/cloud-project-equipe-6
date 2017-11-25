@@ -87,15 +87,15 @@ echo "##########################################################################
 # Download deployment scripts
 sudo curl -L https://raw.githubusercontent.com/PolytechLyon/cloud-project-equipe-6/master/docker-compose.yml -o docker-compose.yml
 sudo curl -L https://raw.githubusercontent.com/PolytechLyon/cloud-project-equipe-6/master/mongoConfiguration.js -o mongoConfiguration.js
-sudo curl -L https://raw.githubusercontent.com/PolytechLyon/cloud-project-equipe-6/master/launch.sh -o launch.sh
+sudo curl -L https://raw.githubusercontent.com/PolytechLyon/cloud-project-equipe-6/master/start_containers.sh -o start_containers.sh
 echo ""
 
 # Make the script executable
-sudo chmod +x launch.sh
+sudo chmod +x start_containers.sh
 echo ""
 
 # Deploy Docker containers
-sudo ./launch.sh
+sudo ./start_containers.sh
 echo ""
 
 echo "##############################################################################"
