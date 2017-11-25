@@ -1,6 +1,5 @@
 package fr.polytech.cloud.controllers;
 
-import fr.polytech.cloud.controllers.responses.EmptyResponse;
 import fr.polytech.cloud.entities.dao.UserDao;
 import fr.polytech.cloud.entities.dto.PositionDto;
 import fr.polytech.cloud.entities.dto.UserDto;
@@ -11,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -46,8 +46,7 @@ public class UserController extends AbstractController {
 
     @RequestMapping(value = "/user", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity getAllUsers(@RequestParam(defaultValue = "" + DEFAULT_PAGE, value = "page") String page) throws Exception {
-        final List<UserDao> users = this.userMongoDBDaoServices.getAllWithLimit(computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_SORTING_CONDITION, UserDao.class);
-        return new ResponseEntity(users, HttpStatus.OK);
+        return ResponseEntity.ok().body(this.userMongoDBDaoServices.getAllWithLimit(computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_SORTING_CONDITION, UserDao.class));
     }
 
     private int computePage(String requestedPage) {
@@ -66,14 +65,13 @@ public class UserController extends AbstractController {
         this.userMongoDBDaoServices.deleteAll();
         this.userMongoDBDaoServices.insertAll(data.toArray(new UserDto[data.size()]));
 
-        final List<UserDao> users = this.userMongoDBDaoServices.getAllWithLimit(DEFAULT_PAGE * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_SORTING_CONDITION, UserDao.class);
-        return new ResponseEntity(users, HttpStatus.CREATED);
+        return ResponseEntity.created(ServletUriComponentsBuilder.fromCurrentRequestUri().build().toUri()).body(this.userMongoDBDaoServices.getAllWithLimit(DEFAULT_PAGE * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_SORTING_CONDITION, UserDao.class));
     }
 
     @RequestMapping(value = "/user", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity deleteAllUsers() throws Exception {
         this.userMongoDBDaoServices.deleteAll();
-        return new ResponseEntity(new EmptyResponse(), HttpStatus.OK);
+        return ResponseEntity.ok().build();
     }
 
     @RequestMapping(value = "/user/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
@@ -81,21 +79,19 @@ public class UserController extends AbstractController {
         try {
             final UserDao user = this.userMongoDBDaoServices.getOne(id, UserDao.class);
             if (user == null) {
-                return new ResponseEntity("Unknown user for the provided ID!", HttpStatus.NOT_FOUND);
+                return ResponseEntity.notFound().build();
             }
 
-            return new ResponseEntity(user, HttpStatus.OK);
+            return ResponseEntity.ok().body(user);
         } catch (IllegalArgumentException ex) {
-            return new ResponseEntity("Invalid ID format!", HttpStatus.NOT_FOUND);
+            return ResponseEntity.notFound().build();
         }
     }
 
     @RequestMapping(value = "/user", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity postOneUser(@RequestBody UserDto data) throws Exception {
         this.userMongoDBDaoServices.insert(data);
-
-        final UserDao user = this.userMongoDBDaoServices.getOne(data.getId(), UserDao.class);
-        return new ResponseEntity(user, HttpStatus.CREATED);
+        return ResponseEntity.created(ServletUriComponentsBuilder.fromCurrentRequestUri().build().toUri()).body(this.userMongoDBDaoServices.getOne(data.getId(), UserDao.class));
     }
 
     @RequestMapping(value = "/user/{id}", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
@@ -103,13 +99,13 @@ public class UserController extends AbstractController {
         try {
             final UserDao user = this.userMongoDBDaoServices.getOne(id, UserDao.class);
             if (user == null) {
-                return new ResponseEntity("Unknown user for the provided ID!", HttpStatus.NOT_FOUND);
+                return ResponseEntity.notFound().build();
             }
 
             this.userMongoDBDaoServices.update(id, mergeUsersInformation(data, user));
-            return new ResponseEntity(this.userMongoDBDaoServices.getOne(id, UserDao.class), HttpStatus.OK);
+            return ResponseEntity.ok().body(this.userMongoDBDaoServices.getOne(id, UserDao.class));
         } catch (IllegalArgumentException ex) {
-            return new ResponseEntity("Invalid ID format!", HttpStatus.NOT_FOUND);
+            return ResponseEntity.notFound().build();
         }
     }
 
@@ -146,13 +142,13 @@ public class UserController extends AbstractController {
         try {
             final UserDao user = this.userMongoDBDaoServices.getOne(id, UserDao.class);
             if (user == null) {
-                return new ResponseEntity("Unknown user for the provided ID!", HttpStatus.INTERNAL_SERVER_ERROR);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
             }
 
             this.userMongoDBDaoServices.delete(id);
-            return new ResponseEntity(new EmptyResponse(), HttpStatus.NO_CONTENT);
+            return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException ex) {
-            return new ResponseEntity("Invalid ID format!", HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -164,15 +160,14 @@ public class UserController extends AbstractController {
         try {
             age = Integer.parseInt(parameters.get(operator));
         } catch (NumberFormatException ex) {
-            return new ResponseEntity("Invalid age format!", HttpStatus.NOT_FOUND);
+            return ResponseEntity.notFound().build();
         }
 
         if (age <= 0) {
-            return new ResponseEntity("Age must be positive!", HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().build();
         }
 
-        final List<UserDao> users = this.userMongoDBDaoServices.getAllWhereWithLimit(String.format(DEFAULT_AGE_SEARCH_PATTERN, queryOperator, LocalDate.now().minusYears(age).format(BirthDayDtoSerializer.DATE_PATTERN_OUT)), computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_SORTING_CONDITION, UserDao.class);
-        return new ResponseEntity(users, HttpStatus.OK);
+        return ResponseEntity.ok().body(this.userMongoDBDaoServices.getAllWhereWithLimit(String.format(DEFAULT_AGE_SEARCH_PATTERN, queryOperator, LocalDate.now().minusYears(age).format(BirthDayDtoSerializer.DATE_PATTERN_OUT)), computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_SORTING_CONDITION, UserDao.class));
     }
 
     private String getOppositeQueryOperator(final String operator) {
@@ -191,13 +186,11 @@ public class UserController extends AbstractController {
 
     @RequestMapping(value = "/user/search", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity searchByLastname(@RequestParam(defaultValue = "" + DEFAULT_PAGE, value = "page") String page, @RequestParam(value = "term") String term) throws Exception {
-        final List<UserDao> users = this.userMongoDBDaoServices.getAllWhereWithLimit(String.format(DEFAULT_LAST_NAME_SEARCH_PATTERN, term), computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_SORTING_CONDITION, UserDao.class);
-        return new ResponseEntity(users, HttpStatus.OK);
+        return ResponseEntity.ok().body(this.userMongoDBDaoServices.getAllWhereWithLimit(String.format(DEFAULT_LAST_NAME_SEARCH_PATTERN, term), computePage(page) * DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_SORTING_CONDITION, UserDao.class));
     }
 
     @RequestMapping(value = "/user/nearest", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity nearest(@RequestParam(defaultValue = "" + DEFAULT_PAGE, value = "page") String page, @RequestParam(value = "lon") String lon, @RequestParam(value = "lat") String lat) throws Exception {
-        final List<UserDao> users = this.userMongoDBDaoServices.getAllWhereWithLimit(String.format(DEFAULT_LOCATION_SEARCH_PATTERN, lon, lat), computePage(page) * DEFAULT_NEAREST_USERS_PAGE_SIZE, DEFAULT_NEAREST_USERS_PAGE_SIZE, UserDao.class);
-        return new ResponseEntity(users, HttpStatus.OK);
+        return ResponseEntity.ok().body(this.userMongoDBDaoServices.getAllWhereWithLimit(String.format(DEFAULT_LOCATION_SEARCH_PATTERN, lon, lat), computePage(page) * DEFAULT_NEAREST_USERS_PAGE_SIZE, DEFAULT_NEAREST_USERS_PAGE_SIZE, UserDao.class));
     }
 }
