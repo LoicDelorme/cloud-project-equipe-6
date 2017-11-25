@@ -95,7 +95,7 @@ sudo chmod +x launch.sh
 echo ""
 
 # Deploy Docker containers
-sudo ./launch
+sudo ./launch.sh
 echo ""
 
 echo "##############################################################################"
